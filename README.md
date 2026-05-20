@@ -65,3 +65,23 @@ src/features/providerWorkboard/
   types.ts
 ```
 
+
+what i changed from ai
+i dont know if i like these bc these should just be in like a cursor rule general for any project
+“I skipped useCallback because the list is small and I can add it if profiling shows a problem
+it was exporting types that werent used in other componenets 
+I used TanStack Query because the assignment asked us to structure mock data like real API integration would follow. Even though the API is mocked, it gives me loading, error, refresh, and mutation states in a way that can be replaced with real endpoints later.
+
+3. Empty state wording is VERY good
+
+This:
+
+Pull down to refresh. If you expected sites here, try again in a moment.
+
+actually sounds product-minded.
+
+Keep that energy. bbfore it was v generic and not ui friendly
+
+if had more time would look into using a ui library this would require research since i havent used a library in react native before so i dont know the common ones but from my little research react native paper not only speeds up dev time but it makes sure ur styling is somewhat uniform
+but for this project i wanted to use the native elements to make it easy to review for yall i rly decided to let cursor do all the styling so i can focus on the functionality here (dk if i should say this)
+statemanangent as the app got bigger 

@@ -67,7 +67,7 @@ type MotionSample = {
     result: "stable" | "rough_motion_detected";
 };
 
-export type ServiceAddress = {
+type ServiceAddress = {
     line1: string;
     city: string;
     region: string;
