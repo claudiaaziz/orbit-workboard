@@ -85,3 +85,4 @@ Keep that energy. bbfore it was v generic and not ui friendly
 if had more time would look into using a ui library this would require research since i havent used a library in react native before so i dont know the common ones but from my little research react native paper not only speeds up dev time but it makes sure ur styling is somewhat uniform
 but for this project i wanted to use the native elements to make it easy to review for yall i rly decided to let cursor do all the styling so i can focus on the functionality here (dk if i should say this)
 statemanangent as the app got bigger 
+I used a small local async resource layer instead of TanStack Query to keep the take-home focused. The API boundary is still isolated, so replacing the hook with TanStack Query later would be straightforward.
