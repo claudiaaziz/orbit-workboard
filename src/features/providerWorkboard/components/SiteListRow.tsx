@@ -1,6 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { SiteListItemModel } from '../domain/siteSummary';
+import type { WorkStatus } from '../types';
+
+const WORK_STATUS_TEXT_STYLES: Record<WorkStatus, { color: string }> = {
+    needs_attention: { color: '#9A3412' },
+    scheduled: { color: '#4B5563' },
+    in_progress: { color: '#1D4ED8' },
+    blocked: { color: '#991B1B' },
+    completed: { color: '#047857' },
+};
 
 type SiteListRowProps = {
     item: SiteListItemModel;
@@ -32,7 +41,14 @@ export function SiteListRow({ item, onPress }: SiteListRowProps) {
             <Text style={styles.location}>{item.locationLabel}</Text>
 
             <View style={styles.metaRow}>
-                <Text style={styles.workStatus}>{item.workStatus.replaceAll('_', ' ')}</Text>
+                <Text
+                    style={[
+                        styles.workStatus,
+                        { color: WORK_STATUS_TEXT_STYLES[item.workStatus].color },
+                    ]}
+                >
+                    {item.workStatus.replaceAll('_', ' ')}
+                </Text>
                 {item.nextVisitTimeLabel ? (
                     <Text style={styles.nextVisit}>Next: {item.nextVisitTimeLabel}</Text>
                 ) : null}
@@ -47,7 +63,7 @@ export function SiteListRow({ item, onPress }: SiteListRowProps) {
                 ) : null}
                 {item.flags.needsProof ? (
                     <Text style={styles.flagProof}>
-                        {item.missingEvidenceCount} missing proof
+                        {item.missingEvidenceCount} needs proof
                     </Text>
                 ) : null}
             </View>
@@ -100,8 +116,7 @@ const styles = StyleSheet.create({
     },
     workStatus: {
         fontSize: 14,
-        fontWeight: '500',
-        color: '#1D4ED8',
+        fontWeight: '600',
         textTransform: 'capitalize',
     },
     nextVisit: {

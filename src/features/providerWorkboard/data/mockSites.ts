@@ -122,7 +122,7 @@ function createGeneratedSite(
     };
 }
 
-function buildMockSites(now: Date): ServiceSite[] {
+export function buildMockSites(now: Date): ServiceSite[] {
     const yesterday = addHours(now, -30);
     const todayMorning = addHours(now, 2);
     const todayAfternoon = addHours(now, 6);

@@ -86,3 +86,4 @@ if had more time would look into using a ui library this would require research 
 but for this project i wanted to use the native elements to make it easy to review for yall i rly decided to let cursor do all the styling so i can focus on the functionality here (dk if i should say this)
 statemanangent as the app got bigger 
 I used a small local async resource layer instead of TanStack Query to keep the take-home focused. The API boundary is still isolated, so replacing the hook with TanStack Query later would be straightforward.
+little ui things like showing 22 out of 24 etc

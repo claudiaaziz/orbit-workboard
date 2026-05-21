@@ -1,9 +1,10 @@
-import type {
-    ServiceSite,
-    ServiceVisit,
-    ServicePriority,
-    VisitStatus,
-    WorkStatus,
+import {
+    ACTIVE_VISIT_STATUSES,
+    type ServiceSite,
+    type ServiceVisit,
+    type ServicePriority,
+    type VisitStatus,
+    type WorkStatus,
 } from '../types';
 
 export type SiteListItemModel = {
@@ -24,14 +25,6 @@ export type SiteListItemModel = {
         needsProof: boolean;
     };
 };
-
-const ACTIVE_VISIT_STATUSES: VisitStatus[] = [
-    'scheduled',
-    'confirmed',
-    'en_route',
-    'on_site',
-    'blocked',
-];
 
 export function formatCompactAddress(site: ServiceSite): string {
     return `${site.address.city}, ${site.address.region}`;

@@ -15,6 +15,30 @@ export type VisitStatus =
     | "completed"
     | "cancelled";
 
+/** Visits still treated as open/active (not completed or cancelled). */
+export const ACTIVE_VISIT_STATUSES: VisitStatus[] = [
+    'scheduled',
+    'confirmed',
+    'en_route',
+    'on_site',
+    'blocked',
+];
+
+export type UploadStatus = 'queued' | 'uploading' | 'uploaded' | 'failed';
+
+export type AssetScanResult = 'match' | 'mismatch';
+
+/** Capture, scan, and upload state for a visit (not on the schedule API model yet). */
+export type VisitFieldState = {
+    hasRequiredEvidenceCaptured?: boolean;
+    assetScanResult?: AssetScanResult;
+    uploadStatus?: UploadStatus;
+};
+
+export type WorkboardContext = {
+    visits: Record<string, VisitFieldState>;
+};
+
 export type ServiceType =
     | "inspection"
     | "repair"
@@ -40,7 +64,7 @@ export type ServiceVisit = {
     lastUpdatedAt: string; // ISO timestamp
 };
 
-type VisitEvidence = {
+export type VisitEvidence = {
     id: string;
     visitId: string;
     type: "arrival_photo" | "completion_photo" | "damage_photo";
@@ -48,14 +72,14 @@ type VisitEvidence = {
     capturedAt: string; // ISO timestamp
     latitude?: number;
     longitude?: number;
-    uploadStatus: "queued" | "uploading" | "uploaded" | "failed";
+    uploadStatus: UploadStatus;
 };
 
-type AssetScan = {
+export type AssetScan = {
     visitId: string;
     expectedAssetCode: string;
     scannedAssetCode: string;
-    result: "match" | "mismatch";
+    result: AssetScanResult;
     scannedAt: string; // ISO timestamp
 };
 
@@ -89,19 +113,26 @@ export type ServiceSite = {
 };
 
 // Filter types
-type DateScopeFilter = 'today' | 'next_7_days' | 'all';
+export type DateScopeFilter = 'today' | 'next_7_days' | 'all';
 
-type EvidenceFilter =
+export type EvidenceFilter =
     | 'missing_proof'
     | 'scan_mismatch'
     | 'ready_to_complete'
     | null;
 
-type WorkboardFilters = {
+export type WorkboardFilters = {
     searchQuery: string;
     workStatus: WorkStatus | 'all';
     dateScope: DateScopeFilter;
     evidenceFilter: EvidenceFilter;
+};
+
+export const DEFAULT_WORKBOARD_FILTERS: WorkboardFilters = {
+    searchQuery: '',
+    workStatus: 'all',
+    dateScope: 'all',
+    evidenceFilter: null,
 };
 
 // API types

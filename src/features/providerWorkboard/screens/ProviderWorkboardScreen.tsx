@@ -10,15 +10,33 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SiteListRow } from '../components/SiteListRow';
+import { WorkboardFilterControls } from '../components/WorkboardFilterControls';
+import { WorkboardSummaryHeader } from '../components/WorkboardSummaryHeader';
 import { useWorkboardSites } from '../viewModels/useWorkboardSites';
+
+function formatUpdatedAt(isoTimestamp: string): string {
+    return new Date(isoTimestamp).toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+}
 
 export function ProviderWorkboardScreen() {
     const {
         siteListItems,
+        summary,
+        filters,
+        filtersActive,
         loadState,
         errorMessage,
         fetchedAt,
         isRefreshing,
+        setSearchQuery,
+        submitSearch,
+        setWorkStatusFilter,
+        setDateScopeFilter,
+        setEvidenceFilter,
+        resetPanelFilters,
         reload,
     } = useWorkboardSites();
 
@@ -53,16 +71,6 @@ export function ProviderWorkboardScreen() {
     return (
         <SafeAreaView style={styles.screen}>
             <StatusBar style="dark" />
-            <View style={styles.header}>
-                <Text style={styles.title}>Provider Workboard</Text>
-                <Text style={styles.subtitle}>Orbit Field Services</Text>
-                {fetchedAt ? (
-                    <Text style={styles.fetchedAt}>
-                        Updated {new Date(fetchedAt).toLocaleTimeString()}
-                    </Text>
-                ) : null}
-            </View>
-
             <FlatList
                 data={siteListItems}
                 keyExtractor={(item) => item.siteId}
@@ -71,11 +79,42 @@ export function ProviderWorkboardScreen() {
                 refreshing={isRefreshing}
                 onRefresh={() => void reload({ isRefresh: true })}
                 showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                    <View style={styles.listHeader}>
+                        <View style={styles.screenChrome}>
+                            <View style={styles.titleBlock}>
+                                <Text style={styles.title}>Provider Workboard</Text>
+                                <Text style={styles.subtitle}>Orbit Field Services</Text>
+                            </View>
+                            {fetchedAt ? (
+                                <Text style={styles.lastRefreshed}>
+                                    Updated {formatUpdatedAt(fetchedAt)}
+                                </Text>
+                            ) : null}
+                        </View>
+
+                        <WorkboardSummaryHeader summary={summary} />
+
+                        <WorkboardFilterControls
+                            filters={filters}
+                            onSearchChange={setSearchQuery}
+                            onSearchSubmit={submitSearch}
+                            onWorkStatusChange={setWorkStatusFilter}
+                            onDateScopeChange={setDateScopeFilter}
+                            onEvidenceFilterChange={setEvidenceFilter}
+                            onResetPanelFilters={resetPanelFilters}
+                        />
+                    </View>
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <Text style={styles.emptyTitle}>Nothing on your workboard</Text>
+                        <Text style={styles.emptyTitle}>
+                            {filtersActive ? 'No matching sites' : 'Nothing on your workboard'}
+                        </Text>
                         <Text style={styles.stateText}>
-                            Pull down to refresh. If you expected sites here, try again in a moment.
+                            {filtersActive
+                                ? 'Try clearing filters or broadening your search.'
+                                : 'Pull down to refresh. If you expected sites here, try again in a moment.'}
                         </Text>
                     </View>
                 }
@@ -96,23 +135,33 @@ const styles = StyleSheet.create({
         padding: 24,
         backgroundColor: '#EEF2F7',
     },
-    header: {
-        paddingHorizontal: 16,
+    listHeader: {
         paddingTop: 8,
-        paddingBottom: 12,
+    },
+    screenChrome: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 12,
+        paddingHorizontal: 16,
+        marginBottom: 10,
+    },
+    titleBlock: {
+        flex: 1,
+        gap: 2,
     },
     title: {
-        fontSize: 28,
+        fontSize: 22,
         fontWeight: '700',
         color: '#111827',
     },
     subtitle: {
-        marginTop: 4,
-        fontSize: 15,
+        fontSize: 14,
         color: '#6B7280',
     },
-    fetchedAt: {
-        marginTop: 6,
+    lastRefreshed: {
+        flexShrink: 0,
+        marginTop: 2,
         fontSize: 12,
         color: '#9CA3AF',
     },
@@ -124,6 +173,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#6B7280',
         textAlign: 'center',
+        paddingHorizontal: 24,
     },
     errorTitle: {
         fontSize: 20,

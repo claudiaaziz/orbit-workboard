@@ -1,7 +1,7 @@
 /** Central analytics boundary — console transport for now; swap for production SDK later. */
 export type AnalyticsEventName =
     | 'workboard_viewed'
-    | 'search_changed'
+    | 'search_submitted'
     | 'filter_changed'
     | 'site_opened'
     | 'visit_opened'
