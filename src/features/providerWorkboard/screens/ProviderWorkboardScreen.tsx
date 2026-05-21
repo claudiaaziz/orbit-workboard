@@ -39,9 +39,12 @@ export function ProviderWorkboardScreen() {
         setEvidenceFilter,
         resetPanelFilters,
         selectedSiteId,
+        selectedVisitDetail,
         selectedSiteDetail,
         openSite,
         closeSite,
+        openVisit,
+        closeVisit,
         reload,
     } = useWorkboardSites();
 
@@ -130,7 +133,10 @@ export function ProviderWorkboardScreen() {
             <SiteDetailSheet
                 visible={selectedSiteId !== null}
                 model={selectedSiteDetail}
+                visitDetail={selectedVisitDetail}
                 onClose={closeSite}
+                onVisitPress={openVisit}
+                onCloseVisit={closeVisit}
             />
         </SafeAreaView>
     );

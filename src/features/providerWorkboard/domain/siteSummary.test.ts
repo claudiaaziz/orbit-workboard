@@ -1,11 +1,13 @@
 import { MOCK_SITES } from '../data/mockSites';
 import type { ServiceSite, ServiceVisit } from '../types';
-import { EMPTY_WORKBOARD_CONTEXT } from './workboardContext';
-import { buildSiteListItem } from './siteSummary';
+import {
+    buildSiteListItem,
+} from './siteSummary';
 import { formatCompactAddress } from './utils/formatters';
 import { countMissingRequiredEvidence } from './utils/visits';
+import { EMPTY_WORKBOARD_CONTEXT } from './workboardContext';
 
-function makeVisit(overrides: Partial<ServiceVisit> & Pick<ServiceVisit, 'id' | 'status'>): ServiceVisit {
+function visit(overrides: Partial<ServiceVisit> & Pick<ServiceVisit, 'id' | 'status'>): ServiceVisit {
     return {
         siteId: 'site-test',
         serviceType: 'inspection',
@@ -21,7 +23,7 @@ function makeVisit(overrides: Partial<ServiceVisit> & Pick<ServiceVisit, 'id' | 
     };
 }
 
-function makeSite(overrides: Partial<ServiceSite> & Pick<ServiceSite, 'id'>): ServiceSite {
+function site(overrides: Partial<ServiceSite> & Pick<ServiceSite, 'id'>): ServiceSite {
     return {
         ...MOCK_SITES[0],
         ...overrides,
@@ -39,53 +41,43 @@ describe('siteSummary', () => {
     it('counts open visits that still need evidence', () => {
         const entry = MOCK_SITES.find((row) => row.id === 'site-edge-001');
         expect(entry).toBeDefined();
-        expect(
-            countMissingRequiredEvidence(entry!.visits, EMPTY_WORKBOARD_CONTEXT),
-        ).toBeGreaterThan(0);
+        expect(countMissingRequiredEvidence(entry!.visits, EMPTY_WORKBOARD_CONTEXT)).toBeGreaterThan(0);
     });
 
     it('does not count completed or cancelled visits as missing evidence', () => {
         expect(
-            countMissingRequiredEvidence(
-                [
-                    makeVisit({
-                        id: 'v-completed',
-                        status: 'completed',
-                        evidenceRequired: true,
-                    }),
-                ],
-                EMPTY_WORKBOARD_CONTEXT,
-            ),
+            countMissingRequiredEvidence([
+                visit({
+                    id: 'v-completed',
+                    status: 'completed',
+                    evidenceRequired: true,
+                }),
+            ], EMPTY_WORKBOARD_CONTEXT),
         ).toBe(0);
 
         expect(
-            countMissingRequiredEvidence(
-                [
-                    makeVisit({
-                        id: 'v-cancelled',
-                        status: 'cancelled',
-                        evidenceRequired: true,
-                    }),
-                ],
-                EMPTY_WORKBOARD_CONTEXT,
-            ),
+            countMissingRequiredEvidence([
+                visit({
+                    id: 'v-cancelled',
+                    status: 'cancelled',
+                    evidenceRequired: true,
+                }),
+            ], EMPTY_WORKBOARD_CONTEXT),
         ).toBe(0);
     });
 
     it('builds list item with urgent flag for urgent priority', () => {
         const urgentSite = MOCK_SITES.find((row) => row.priority === 'urgent');
         expect(urgentSite).toBeDefined();
-        expect(buildSiteListItem(urgentSite!, EMPTY_WORKBOARD_CONTEXT).flags.isUrgent).toBe(
-            true,
-        );
+        expect(buildSiteListItem(urgentSite!, EMPTY_WORKBOARD_CONTEXT).flags.isUrgent).toBe(true);
     });
 
     it('sets blocked flag when a visit is blocked', () => {
-        const entry = makeSite({
+        const entry = site({
             id: 'site-blocked',
             workStatus: 'scheduled',
             visits: [
-                makeVisit({
+                visit({
                     id: 'v-blocked',
                     status: 'blocked',
                     scheduledStart: '2030-06-01T10:00:00.000Z',
@@ -97,10 +89,10 @@ describe('siteSummary', () => {
     });
 
     it('sets late flag when an open visit is past scheduled end', () => {
-        const entry = makeSite({
+        const entry = site({
             id: 'site-late',
             visits: [
-                makeVisit({
+                visit({
                     id: 'v-late',
                     status: 'scheduled',
                     scheduledStart: '2020-01-01T10:00:00.000Z',
@@ -119,16 +111,16 @@ describe('siteSummary', () => {
     });
 
     it('uses the earliest open visit for next visit time, not completed work', () => {
-        const entry = makeSite({
+        const entry = site({
             id: 'site-next',
             visits: [
-                makeVisit({
+                visit({
                     id: 'v-done',
                     status: 'completed',
                     scheduledStart: '2020-01-01T10:00:00.000Z',
                     scheduledEnd: '2020-01-01T12:00:00.000Z',
                 }),
-                makeVisit({
+                visit({
                     id: 'v-next',
                     status: 'scheduled',
                     scheduledStart: '2030-08-15T09:30:00.000Z',

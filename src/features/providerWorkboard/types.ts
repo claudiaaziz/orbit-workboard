@@ -29,10 +29,13 @@ export type UploadStatus = 'queued' | 'uploading' | 'uploaded' | 'failed';
 export type AssetScanResult = 'match' | 'mismatch';
 
 /** Capture, scan, and upload state for a visit (not on the schedule API model yet). */
+export type MotionCheckResult = 'stable' | 'rough_motion_detected';
+
 export type VisitFieldState = {
     hasRequiredEvidenceCaptured?: boolean;
     assetScanResult?: AssetScanResult;
     uploadStatus?: UploadStatus;
+    motionResult?: MotionCheckResult;
 };
 
 export type WorkboardContext = {

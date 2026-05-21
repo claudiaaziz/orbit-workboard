@@ -14,6 +14,7 @@ export const MOCK_WORKBOARD_CONTEXT: WorkboardContext = {
             hasRequiredEvidenceCaptured: true,
             assetScanResult: 'match',
             uploadStatus: 'uploaded',
+            motionResult: 'stable',
         },
         'visit-site-edge-002-2': {
             uploadStatus: 'queued',

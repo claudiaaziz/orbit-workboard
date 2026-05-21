@@ -11,15 +11,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { SiteDetailModel, SiteDetailVisitItem } from '../domain/siteDetail';
+import type { VisitDetailModel } from '../domain/visitDetail';
 
 import { getPriorityBadgeStyle } from './priorityBadgeStyles';
-
-type SiteDetailSheetProps = {
-    visible: boolean;
-    model: SiteDetailModel | null;
-    onClose: () => void;
-    onVisitPress?: (visitId: string) => void;
-};
+import { VisitDetailSheet } from './VisitDetailSheet';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
@@ -75,11 +70,23 @@ function VisitTimelineRow({
     );
 }
 
+type SiteDetailSheetProps = {
+    visible: boolean;
+    model: SiteDetailModel | null;
+    visitDetail: VisitDetailModel | null;
+    onClose: () => void;
+    onVisitPress: (visitId: string) => void;
+    onCloseVisit: () => void;
+};
+
+
 export function SiteDetailSheet({
     visible,
     model,
+    visitDetail,
     onClose,
     onVisitPress,
+    onCloseVisit,
 }: SiteDetailSheetProps) {
     return (
         <Modal
@@ -172,6 +179,12 @@ export function SiteDetailSheet({
                             ))}
                         </Section>
                     </ScrollView>
+
+                    <VisitDetailSheet
+                        visible={visitDetail !== null}
+                        model={visitDetail}
+                        onClose={onCloseVisit}
+                    />
                 </SafeAreaView>
             ) : null}
         </Modal>

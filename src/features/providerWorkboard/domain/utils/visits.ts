@@ -39,8 +39,27 @@ export function visitHasScanMismatch(visit: ServiceVisit, context: WorkboardCont
     return getVisitFieldState(context, visit.id).assetScanResult === 'mismatch';
 }
 
+export function visitAssetScanSatisfied(
+    visit: ServiceVisit,
+    context: WorkboardContext,
+): boolean {
+    return getVisitFieldState(context, visit.id).assetScanResult === 'match';
+}
+
+export function visitMotionCheckSatisfied(
+    visit: ServiceVisit,
+    context: WorkboardContext,
+): boolean {
+    if (!visit.motionCheckRequired) {
+        return true;
+    }
+
+    const motionResult = getVisitFieldState(context, visit.id).motionResult;
+    return motionResult === 'stable';
+}
+
 export function visitReadyToComplete(visit: ServiceVisit, context: WorkboardContext): boolean {
-    if (!ACTIVE_VISIT_STATUSES.includes(visit.status) || visit.status === 'blocked') {
+    if (visit.status !== 'on_site') {
         return false;
     }
 
@@ -52,7 +71,15 @@ export function visitReadyToComplete(visit: ServiceVisit, context: WorkboardCont
         return false;
     }
 
-    return visit.status === 'on_site' || visit.status === 'confirmed';
+    if (!visitAssetScanSatisfied(visit, context)) {
+        return false;
+    }
+
+    if (!visitMotionCheckSatisfied(visit, context)) {
+        return false;
+    }
+
+    return true;
 }
 
 export function visitHasFailedOrQueuedUpload(
