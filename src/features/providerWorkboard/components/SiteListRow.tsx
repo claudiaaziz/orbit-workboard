@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SiteListItemModel } from '../domain/siteSummary';
 import type { WorkStatus } from '../types';
 
+import { getPriorityBadgeStyle } from './priorityBadgeStyles';
+
 const WORK_STATUS_TEXT_STYLES: Record<WorkStatus, { color: string }> = {
     needs_attention: { color: '#9A3412' },
     scheduled: { color: '#4B5563' },
@@ -13,26 +15,20 @@ const WORK_STATUS_TEXT_STYLES: Record<WorkStatus, { color: string }> = {
 
 type SiteListRowProps = {
     item: SiteListItemModel;
-    onPress?: (siteId: string) => void; // this wont be optional in next step so remove optional then
+    onPress: (siteId: string) => void;
 };
-
 
 export function SiteListRow({ item, onPress }: SiteListRowProps) {
     return (
         <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${item.siteName}, ${item.customerName}`}
-            onPress={() => onPress?.(item.siteId)}
+            onPress={() => onPress(item.siteId)}
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         >
             <View style={styles.headerRow}>
                 <Text style={styles.siteName}>{item.siteName}</Text>
-                <Text
-                    style={[
-                        styles.priorityBadge,
-                        item.flags.isUrgent && styles.priorityUrgent,
-                    ]}
-                >
+                <Text style={getPriorityBadgeStyle(item.priority)}>
                     {item.priority.toUpperCase()}
                 </Text>
             </View>
@@ -50,7 +46,7 @@ export function SiteListRow({ item, onPress }: SiteListRowProps) {
                     {item.workStatus.replaceAll('_', ' ')}
                 </Text>
                 {item.nextVisitTimeLabel ? (
-                    <Text style={styles.nextVisit}>Next: {item.nextVisitTimeLabel}</Text>
+                    <Text style={styles.nextVisit}>Next visit: {item.nextVisitTimeLabel}</Text>
                 ) : null}
             </View>
 
@@ -127,20 +123,6 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 13,
         color: '#6B7280',
-    },
-    priorityBadge: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#4B5563',
-        backgroundColor: '#E5E7EB',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 999,
-        overflow: 'hidden',
-    },
-    priorityUrgent: {
-        color: '#991B1B',
-        backgroundColor: '#FEE2E2',
     },
     flagsRow: {
         marginTop: 10,

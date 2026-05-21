@@ -7,7 +7,8 @@ import {
     hasActiveFilters,
     visitMatchesDateScope,
 } from './workboardFilters';
-import { EMPTY_WORKBOARD_CONTEXT, getVisitFieldState } from './workboardContext';
+import { EMPTY_WORKBOARD_CONTEXT } from './workboardContext';
+import { visitHasFailedOrQueuedUpload, visitMissingRequiredEvidence } from './utils/visits';
 
 const REFERENCE_DATE = new Date('2030-06-15T12:00:00.000Z');
 
@@ -16,31 +17,15 @@ function sitesForReferenceDate(): ServiceSite[] {
 }
 
 function countVisitsMissingEvidence(sites: ServiceSite[], context: WorkboardContext): number {
-    return sites.reduce((total, site) => {
-        const missingOnSite = site.visits.filter((visit) => {
-            if (!visit.evidenceRequired) {
-                return false;
-            }
-
-            if (visit.status === 'completed' || visit.status === 'cancelled') {
-                return false;
-            }
-
-            const fieldState = getVisitFieldState(context, visit.id);
-            return !fieldState.hasRequiredEvidenceCaptured;
-        }).length;
-
-        return total + missingOnSite;
-    }, 0);
+    return sites
+        .flatMap((site) => site.visits)
+        .filter((visit) => visitMissingRequiredEvidence(visit, context)).length;
 }
 
 function countFailedOrQueuedUploads(sites: ServiceSite[], context: WorkboardContext): number {
     return sites
         .flatMap((site) => site.visits)
-        .filter((visit) => {
-            const status = getVisitFieldState(context, visit.id).uploadStatus;
-            return status === 'failed' || status === 'queued';
-        }).length;
+        .filter((visit) => visitHasFailedOrQueuedUpload(visit, context)).length;
 }
 
 describe('workboardFilters', () => {

@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { trackEvent } from '../analytics';
 import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
 import { fetchSites, WorkboardApiError } from '../data/mockApi';
+import { buildSiteDetailModel } from '../domain/siteDetail';
+import type { SiteDetailModel } from '../domain/siteDetail';
 import { buildSiteListItem } from '../domain/siteSummary';
 import { filterSites, hasActiveFilters } from '../domain/workboardFilters';
 import { buildWorkboardSummary } from '../domain/workboardSummary';
@@ -35,6 +37,10 @@ type UseWorkboardSitesResult = {
     setDateScopeFilter: (dateScope: DateScopeFilter) => void;
     setEvidenceFilter: (evidenceFilter: EvidenceFilter) => void;
     resetPanelFilters: () => void;
+    selectedSiteId: string | null;
+    selectedSiteDetail: SiteDetailModel | null;
+    openSite: (siteId: string) => void;
+    closeSite: () => void;
     reload: (options?: { isRefresh?: boolean }) => void;
 };
 
@@ -45,9 +51,10 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [fetchedAt, setFetchedAt] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
     const hasTrackedWorkboardView = useRef(false);
 
-    const reload = useCallback(async (options?: { isRefresh?: boolean }) => {
+    async function reload(options?: { isRefresh?: boolean }) {
         const isRefresh = options?.isRefresh ?? false;
 
         if (isRefresh) {
@@ -80,11 +87,11 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
         } finally {
             setIsRefreshing(false);
         }
-    }, []);
+    }
 
     useEffect(() => {
         void reload();
-    }, [reload]);
+    }, []);
 
     const filteredSites = useMemo(
         () => filterSites(sites, filters, MOCK_WORKBOARD_CONTEXT),
@@ -92,7 +99,10 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
     );
 
     const siteListItems = useMemo(
-        () => filteredSites.map((site) => buildSiteListItem(site)),
+        () =>
+            filteredSites.map((site) =>
+                buildSiteListItem(site, MOCK_WORKBOARD_CONTEXT),
+            ),
         [filteredSites],
     );
 
@@ -101,33 +111,33 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
         [filteredSites],
     );
 
-    const setSearchQuery = useCallback((searchQuery: string) => {
+    function setSearchQuery(searchQuery: string) {
         setFilters((current) => ({ ...current, searchQuery }));
-    }, []);
+    }
 
-    const submitSearch = useCallback((searchQuery: string) => {
+    function submitSearch(searchQuery: string) {
         trackEvent('search_submitted', { queryLength: searchQuery.trim().length });
-    }, []);
+    }
 
-    const setWorkStatusFilter = useCallback((workStatus: WorkStatus | 'all') => {
+    function setWorkStatusFilter(workStatus: WorkStatus | 'all') {
         setFilters((current) => ({ ...current, workStatus }));
         trackEvent('filter_changed', { filter: 'work_status', value: workStatus });
-    }, []);
+    }
 
-    const setDateScopeFilter = useCallback((dateScope: DateScopeFilter) => {
+    function setDateScopeFilter(dateScope: DateScopeFilter) {
         setFilters((current) => ({ ...current, dateScope }));
         trackEvent('filter_changed', { filter: 'date_scope', value: dateScope });
-    }, []);
+    }
 
-    const setEvidenceFilter = useCallback((evidenceFilter: EvidenceFilter) => {
+    function setEvidenceFilter(evidenceFilter: EvidenceFilter) {
         setFilters((current) => ({ ...current, evidenceFilter }));
         trackEvent('filter_changed', {
             filter: 'evidence',
             value: evidenceFilter ?? 'none',
         });
-    }, []);
+    }
 
-    const resetPanelFilters = useCallback(() => {
+    function resetPanelFilters() {
         setFilters((current) => ({
             ...current,
             workStatus: DEFAULT_WORKBOARD_FILTERS.workStatus,
@@ -135,7 +145,29 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
             evidenceFilter: DEFAULT_WORKBOARD_FILTERS.evidenceFilter,
         }));
         trackEvent('filter_changed', { filter: 'reset_panel', value: 'all' });
-    }, []);
+    }
+
+    function openSite(siteId: string) {
+        setSelectedSiteId(siteId);
+        trackEvent('site_opened', { siteId });
+    }
+
+    function closeSite() {
+        setSelectedSiteId(null);
+    }
+
+    const selectedSiteDetail = useMemo(() => {
+        if (!selectedSiteId) {
+            return null;
+        }
+
+        const site = filteredSites.find((entry) => entry.id === selectedSiteId);
+        if (!site) {
+            return null;
+        }
+
+        return buildSiteDetailModel(site, MOCK_WORKBOARD_CONTEXT);
+    }, [filteredSites, selectedSiteId]);
 
     return {
         sites,
@@ -153,6 +185,10 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
         setDateScopeFilter,
         setEvidenceFilter,
         resetPanelFilters,
+        selectedSiteId,
+        selectedSiteDetail,
+        openSite,
+        closeSite,
         reload,
     };
 }

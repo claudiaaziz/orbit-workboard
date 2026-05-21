@@ -9,6 +9,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SiteDetailSheet } from '../components/SiteDetailSheet';
 import { SiteListRow } from '../components/SiteListRow';
 import { WorkboardFilterControls } from '../components/WorkboardFilterControls';
 import { WorkboardSummaryHeader } from '../components/WorkboardSummaryHeader';
@@ -37,6 +38,10 @@ export function ProviderWorkboardScreen() {
         setDateScopeFilter,
         setEvidenceFilter,
         resetPanelFilters,
+        selectedSiteId,
+        selectedSiteDetail,
+        openSite,
+        closeSite,
         reload,
     } = useWorkboardSites();
 
@@ -74,7 +79,9 @@ export function ProviderWorkboardScreen() {
             <FlatList
                 data={siteListItems}
                 keyExtractor={(item) => item.siteId}
-                renderItem={({ item }) => <SiteListRow item={item} />}
+                renderItem={({ item }) => (
+                    <SiteListRow item={item} onPress={openSite} />
+                )}
                 contentContainerStyle={styles.listContent}
                 refreshing={isRefreshing}
                 onRefresh={() => void reload({ isRefresh: true })}
@@ -118,6 +125,12 @@ export function ProviderWorkboardScreen() {
                         </Text>
                     </View>
                 }
+            />
+
+            <SiteDetailSheet
+                visible={selectedSiteId !== null}
+                model={selectedSiteDetail}
+                onClose={closeSite}
             />
         </SafeAreaView>
     );

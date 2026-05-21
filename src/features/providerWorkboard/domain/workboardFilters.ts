@@ -1,5 +1,4 @@
 import {
-    ACTIVE_VISIT_STATUSES,
     type EvidenceFilter,
     type DateScopeFilter,
     type ServiceSite,
@@ -8,15 +7,20 @@ import {
     type WorkboardFilters,
     type WorkStatus,
 } from '../types';
-import { getVisitFieldState } from './workboardContext';
+import {
+    visitHasScanMismatch,
+    visitMissingRequiredEvidence,
+    visitReadyToComplete,
+} from './utils/visits';
 
+// Date matching
 function startOfDay(date: Date): Date {
     const value = new Date(date);
     value.setHours(0, 0, 0, 0);
     return value;
 }
 
-function visitMatchesDateScope(
+export function visitMatchesDateScope(
     visit: ServiceVisit,
     dateScope: DateScopeFilter,
     referenceDate: Date,
@@ -47,6 +51,7 @@ function siteMatchesDateScope(
     return site.visits.some((visit) => visitMatchesDateScope(visit, dateScope, referenceDate));
 }
 
+// Search and status matching
 function siteMatchesWorkStatus(site: ServiceSite, workStatus: WorkStatus | 'all'): boolean {
     if (workStatus === 'all') {
         return true;
@@ -80,43 +85,6 @@ function siteMatchesSearch(site: ServiceSite, searchQuery: string): boolean {
     return haystack.includes(query);
 }
 
-function visitMissingRequiredEvidence(
-    visit: ServiceVisit,
-    context: WorkboardContext,
-): boolean {
-    if (!visit.evidenceRequired) {
-        return false;
-    }
-
-    if (visit.status === 'completed' || visit.status === 'cancelled') {
-        return false;
-    }
-
-    const fieldState = getVisitFieldState(context, visit.id);
-    return !fieldState.hasRequiredEvidenceCaptured;
-}
-
-function visitHasScanMismatch(visit: ServiceVisit, context: WorkboardContext): boolean {
-    return getVisitFieldState(context, visit.id).assetScanResult === 'mismatch';
-}
-
-// TODO: this is not done, we need to check the upload status etc
-function visitReadyToComplete(visit: ServiceVisit, context: WorkboardContext): boolean {
-    if (!ACTIVE_VISIT_STATUSES.includes(visit.status) || visit.status === 'blocked') {
-        return false;
-    }
-
-    if (visitMissingRequiredEvidence(visit, context)) {
-        return false;
-    }
-
-    if (visitHasScanMismatch(visit, context)) {
-        return false;
-    }
-
-    return visit.status === 'on_site' || visit.status === 'confirmed';
-}
-
 function siteMatchesEvidenceFilter(
     site: ServiceSite,
     evidenceFilter: EvidenceFilter,
@@ -137,6 +105,7 @@ function siteMatchesEvidenceFilter(
     return site.visits.some((visit) => visitReadyToComplete(visit, context));
 }
 
+// Public API
 export function filterSites(
     sites: ServiceSite[],
     filters: WorkboardFilters,
@@ -161,9 +130,3 @@ export function hasActiveFilters(filters: WorkboardFilters): boolean {
     );
 }
 
-export {
-    visitMatchesDateScope,
-    visitMissingRequiredEvidence,
-    visitHasScanMismatch,
-    visitReadyToComplete,
-};

@@ -39,15 +39,15 @@ function labelForValue<T extends string>(
     return options.find((option) => option.value === value)?.label ?? value;
 }
 
-export function getWorkStatusFilterLabel(workStatus: WorkStatus | 'all'): string {
+function getWorkStatusFilterLabel(workStatus: WorkStatus | 'all'): string {
     return labelForValue(WORK_STATUS_FILTER_OPTIONS, workStatus);
 }
 
-export function getDateScopeFilterLabel(dateScope: DateScopeFilter): string {
+function getDateScopeFilterLabel(dateScope: DateScopeFilter): string {
     return labelForValue(DATE_SCOPE_FILTER_OPTIONS, dateScope);
 }
 
-export function getEvidenceFilterLabel(evidenceFilter: NonNullable<EvidenceFilter>): string {
+function getEvidenceFilterLabel(evidenceFilter: NonNullable<EvidenceFilter>): string {
     return labelForValue(EVIDENCE_FILTER_OPTIONS, evidenceFilter);
 }
 
