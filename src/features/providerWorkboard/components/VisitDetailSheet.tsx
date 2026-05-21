@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
     Modal,
     Pressable,
     ScrollView,
@@ -9,6 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+    getVisitActionConfirmationMessage,
+    visitActionRequiresConfirmation,
+} from '../domain/visitActionMutations';
+import type { VisitActionId } from '../domain/visitActions';
 import type { VisitChecklistItem, VisitDetailModel } from '../domain/visitDetail';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -39,10 +46,42 @@ function ChecklistRow({ item }: { item: VisitChecklistItem }) {
 type VisitDetailSheetProps = {
     visible: boolean;
     model: VisitDetailModel | null;
+    pendingVisitActionId: VisitActionId | null;
+    visitActionError: string | null;
     onClose: () => void;
+    onRunVisitAction: (actionId: VisitActionId) => void;
+    onDismissVisitActionError: () => void;
 };
 
-export function VisitDetailSheet({ visible, model, onClose }: VisitDetailSheetProps) {
+export function VisitDetailSheet({
+    visible,
+    model,
+    pendingVisitActionId,
+    visitActionError,
+    onClose,
+    onRunVisitAction,
+    onDismissVisitActionError,
+}: VisitDetailSheetProps) {
+    function handleActionPress(actionId: VisitActionId, enabled: boolean) {
+        if (!enabled || pendingVisitActionId !== null) {
+            return;
+        }
+
+        if (visitActionRequiresConfirmation(actionId)) {
+            Alert.alert('Confirm action', getVisitActionConfirmationMessage(actionId), [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Continue',
+                    style: actionId === 'cancel_visit' ? 'destructive' : 'default',
+                    onPress: () => onRunVisitAction(actionId),
+                },
+            ]);
+            return;
+        }
+
+        onRunVisitAction(actionId);
+    }
+
     return (
         <Modal
             visible={visible && model !== null}
@@ -111,36 +150,68 @@ export function VisitDetailSheet({ visible, model, onClose }: VisitDetailSheetPr
                         </Section>
 
                         <Section title="Actions">
+                            {visitActionError ? (
+                                <View style={styles.actionErrorBanner}>
+                                    <Text style={styles.actionErrorText}>{visitActionError}</Text>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Dismiss action error"
+                                        onPress={onDismissVisitActionError}
+                                        hitSlop={8}
+                                    >
+                                        <Text style={styles.actionErrorDismiss}>Dismiss</Text>
+                                    </Pressable>
+                                </View>
+                            ) : null}
                             {model.availableActions.length === 0 ? (
                                 <Text style={styles.mutedText}>No actions available</Text>
                             ) : (
-                                model.availableActions.map((action) => (
-                                    <View key={action.id} style={styles.actionRow}>
-                                        <Pressable
-                                            accessibilityRole="button"
-                                            accessibilityLabel={action.label}
-                                            accessibilityState={{ disabled: !action.enabled }}
-                                            disabled={!action.enabled}
-                                            style={({ pressed }) => [
-                                                styles.actionButton,
-                                                !action.enabled && styles.actionButtonDisabled,
-                                                pressed && action.enabled && styles.actionButtonPressed,
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.actionLabel,
-                                                    !action.enabled && styles.actionLabelDisabled,
+                                model.availableActions.map((action) => {
+                                    const isPending = pendingVisitActionId === action.id;
+                                    const actionDisabled =
+                                        !action.enabled ||
+                                        pendingVisitActionId !== null;
+
+                                    return (
+                                        <View key={action.id} style={styles.actionRow}>
+                                            <Pressable
+                                                accessibilityRole="button"
+                                                accessibilityLabel={action.label}
+                                                accessibilityState={{ disabled: actionDisabled }}
+                                                disabled={actionDisabled}
+                                                onPress={() =>
+                                                    handleActionPress(action.id, action.enabled)
+                                                }
+                                                style={({ pressed }) => [
+                                                    styles.actionButton,
+                                                    actionDisabled && styles.actionButtonDisabled,
+                                                    pressed &&
+                                                        !actionDisabled &&
+                                                        styles.actionButtonPressed,
                                                 ]}
                                             >
-                                                {action.label}
-                                            </Text>
-                                        </Pressable>
-                                        {action.disabledReason ? (
-                                            <Text style={styles.actionHint}>{action.disabledReason}</Text>
-                                        ) : null}
-                                    </View>
-                                ))
+                                                {isPending ? (
+                                                    <ActivityIndicator color="#FFFFFF" />
+                                                ) : (
+                                                    <Text
+                                                        style={[
+                                                            styles.actionLabel,
+                                                            actionDisabled &&
+                                                                styles.actionLabelDisabled,
+                                                        ]}
+                                                    >
+                                                        {action.label}
+                                                    </Text>
+                                                )}
+                                            </Pressable>
+                                            {action.disabledReason ? (
+                                                <Text style={styles.actionHint}>
+                                                    {action.disabledReason}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                    );
+                                })
                             )}
                         </Section>
                     </ScrollView>
@@ -271,5 +342,23 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         paddingHorizontal: 4,
+    },
+    actionErrorBanner: {
+        gap: 8,
+        padding: 12,
+        borderRadius: 10,
+        backgroundColor: '#FEF2F2',
+        marginBottom: 8,
+    },
+    actionErrorText: {
+        fontSize: 14,
+        color: '#991B1B',
+        lineHeight: 20,
+    },
+    actionErrorDismiss: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1D4ED8',
+        alignSelf: 'flex-start',
     },
 });

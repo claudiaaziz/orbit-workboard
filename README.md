@@ -23,6 +23,8 @@ pnpm start
 | `pnpm lint` | ESLint via Expo |
 | `pnpm test` | Jest (domain logic) |
 
+Visit actions succeed by default. The hook passes its `workboardContext` into `performVisitAction` so API eligibility matches the UI. To demo the error banner and retry flow, call `performVisitAction` with `simulateFailure: true` (see `data/mockApi.ts`).
+
 ### Adding dependencies
 
 Use **pnpm** for installs and **Expo** for native/SDK-aligned versions:
@@ -87,3 +89,4 @@ but for this project i wanted to use the native elements to make it easy to revi
 statemanangent as the app got bigger 
 I used a small local async resource layer instead of TanStack Query to keep the take-home focused. The API boundary is still isolated, so replacing the hook with TanStack Query later would be straightforward.
 little ui things like showing 22 out of 24 etc
+I kept state coordination in the useWorkboardSites view model and passed state/callbacks into presentational sheets. I considered context, but the flow is only two sheet layers deep, so explicit props kept the data flow easier to trace for the take-home.

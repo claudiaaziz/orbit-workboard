@@ -53,7 +53,6 @@ function completeDisabledReason(
     return undefined;
 }
 
-// Public API — slice 5 will wire mutations to these ids
 export function getAvailableVisitActions(
     visit: ServiceVisit,
     context: WorkboardContext,

@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { SiteDetailModel, SiteDetailVisitItem } from '../domain/siteDetail';
 import type { VisitDetailModel } from '../domain/visitDetail';
+import type { VisitActionId } from '../domain/visitActions';
 
 import { getPriorityBadgeStyle } from './priorityBadgeStyles';
 import { VisitDetailSheet } from './VisitDetailSheet';
@@ -74,9 +75,13 @@ type SiteDetailSheetProps = {
     visible: boolean;
     model: SiteDetailModel | null;
     visitDetail: VisitDetailModel | null;
+    pendingVisitActionId: VisitActionId | null;
+    visitActionError: string | null;
     onClose: () => void;
     onVisitPress: (visitId: string) => void;
     onCloseVisit: () => void;
+    onRunVisitAction: (actionId: VisitActionId) => void;
+    onDismissVisitActionError: () => void;
 };
 
 
@@ -84,9 +89,13 @@ export function SiteDetailSheet({
     visible,
     model,
     visitDetail,
+    pendingVisitActionId,
+    visitActionError,
     onClose,
     onVisitPress,
     onCloseVisit,
+    onRunVisitAction,
+    onDismissVisitActionError,
 }: SiteDetailSheetProps) {
     return (
         <Modal
@@ -183,7 +192,11 @@ export function SiteDetailSheet({
                     <VisitDetailSheet
                         visible={visitDetail !== null}
                         model={visitDetail}
+                        pendingVisitActionId={pendingVisitActionId}
+                        visitActionError={visitActionError}
                         onClose={onCloseVisit}
+                        onRunVisitAction={onRunVisitAction}
+                        onDismissVisitActionError={onDismissVisitActionError}
                     />
                 </SafeAreaView>
             ) : null}

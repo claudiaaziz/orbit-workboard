@@ -41,10 +41,14 @@ export function ProviderWorkboardScreen() {
         selectedSiteId,
         selectedVisitDetail,
         selectedSiteDetail,
+        pendingVisitActionId,
+        visitActionError,
         openSite,
         closeSite,
         openVisit,
         closeVisit,
+        runVisitAction,
+        clearVisitActionError,
         reload,
     } = useWorkboardSites();
 
@@ -134,9 +138,13 @@ export function ProviderWorkboardScreen() {
                 visible={selectedSiteId !== null}
                 model={selectedSiteDetail}
                 visitDetail={selectedVisitDetail}
+                pendingVisitActionId={pendingVisitActionId}
+                visitActionError={visitActionError}
                 onClose={closeSite}
                 onVisitPress={openVisit}
                 onCloseVisit={closeVisit}
+                onRunVisitAction={(actionId) => void runVisitAction(actionId)}
+                onDismissVisitActionError={clearVisitActionError}
             />
         </SafeAreaView>
     );

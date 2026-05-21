@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { trackEvent } from '../analytics';
 import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
-import { fetchSites, WorkboardApiError } from '../data/mockApi';
+import { fetchSites, performVisitAction, WorkboardApiError } from '../data/mockApi';
+import { isVisitActionEnabled } from '../domain/visitActionMutations';
+import type { VisitActionId } from '../domain/visitActions';
 import { buildSiteDetailModel } from '../domain/siteDetail';
 import type { SiteDetailModel } from '../domain/siteDetail';
 import { buildVisitDetailModel } from '../domain/visitDetail';
@@ -16,6 +18,7 @@ import type {
     DateScopeFilter,
     EvidenceFilter,
     ServiceSite,
+    WorkboardContext,
     WorkboardFilters,
     WorkStatus,
 } from '../types';
@@ -43,15 +46,22 @@ type UseWorkboardSitesResult = {
     selectedVisitId: string | null;
     selectedSiteDetail: SiteDetailModel | null;
     selectedVisitDetail: VisitDetailModel | null;
+    pendingVisitActionId: VisitActionId | null;
+    visitActionError: string | null;
     openSite: (siteId: string) => void;
     closeSite: () => void;
     openVisit: (visitId: string) => void;
     closeVisit: () => void;
+    runVisitAction: (actionId: VisitActionId) => void;
+    clearVisitActionError: () => void;
     reload: (options?: { isRefresh?: boolean }) => void;
 };
 
 export function useWorkboardSites(): UseWorkboardSitesResult {
     const [sites, setSites] = useState<ServiceSite[]>([]);
+    const [workboardContext] = useState<WorkboardContext>(() =>
+        structuredClone(MOCK_WORKBOARD_CONTEXT),
+    );
     const [filters, setFilters] = useState<WorkboardFilters>(DEFAULT_WORKBOARD_FILTERS);
     const [loadState, setLoadState] = useState<WorkboardLoadState>('idle');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,6 +69,10 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
     const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+    const [pendingVisitActionId, setPendingVisitActionId] = useState<VisitActionId | null>(
+        null,
+    );
+    const [visitActionError, setVisitActionError] = useState<string | null>(null);
     const hasTrackedWorkboardView = useRef(false);
 
     async function reload(options?: { isRefresh?: boolean }) {
@@ -101,21 +115,21 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
     }, []);
 
     const filteredSites = useMemo(
-        () => filterSites(sites, filters, MOCK_WORKBOARD_CONTEXT),
-        [sites, filters],
+        () => filterSites(sites, filters, workboardContext),
+        [sites, filters, workboardContext],
     );
 
     const siteListItems = useMemo(
         () =>
             filteredSites.map((site) =>
-                buildSiteListItem(site, MOCK_WORKBOARD_CONTEXT),
+                buildSiteListItem(site, workboardContext),
             ),
-        [filteredSites],
+        [filteredSites, workboardContext],
     );
 
     const summary = useMemo(
-        () => buildWorkboardSummary(filteredSites, MOCK_WORKBOARD_CONTEXT),
-        [filteredSites],
+        () => buildWorkboardSummary(filteredSites, workboardContext),
+        [filteredSites, workboardContext],
     );
 
     function setSearchQuery(searchQuery: string) {
@@ -157,21 +171,83 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
     function openSite(siteId: string) {
         setSelectedSiteId(siteId);
         setSelectedVisitId(null);
+        setVisitActionError(null);
         trackEvent('site_opened', { siteId });
     }
 
     function closeSite() {
         setSelectedSiteId(null);
         setSelectedVisitId(null);
+        setVisitActionError(null);
     }
 
     function openVisit(visitId: string) {
         setSelectedVisitId(visitId);
+        setVisitActionError(null);
         trackEvent('visit_opened', { visitId, siteId: selectedSiteId ?? undefined });
     }
 
     function closeVisit() {
         setSelectedVisitId(null);
+        setVisitActionError(null);
+    }
+
+    function clearVisitActionError() {
+        setVisitActionError(null);
+    }
+
+    async function runVisitAction(actionId: VisitActionId) {
+        if (!selectedSiteId || !selectedVisitId || pendingVisitActionId !== null) {
+            return;
+        }
+
+        const site = sites.find((entry) => entry.id === selectedSiteId);
+        const visit = site?.visits.find((entry) => entry.id === selectedVisitId);
+        if (!visit) {
+            return;
+        }
+
+        if (!isVisitActionEnabled(visit, actionId, workboardContext)) {
+            return;
+        }
+
+        setVisitActionError(null);
+        setPendingVisitActionId(actionId);
+        trackEvent('visit_action_started', {
+            actionId,
+            visitId: selectedVisitId,
+            siteId: selectedSiteId,
+        });
+
+        try {
+            const result = await performVisitAction({
+                siteId: selectedSiteId,
+                visitId: selectedVisitId,
+                actionId,
+                context: workboardContext,
+            });
+            setSites(result.sites);
+            trackEvent('visit_action_completed', {
+                actionId,
+                visitId: selectedVisitId,
+                siteId: selectedSiteId,
+            });
+        } catch (error) {
+            const message =
+                error instanceof WorkboardApiError
+                    ? error.message
+                    : 'Unable to update the visit right now. Try again in a moment.';
+
+            setVisitActionError(message);
+            trackEvent('visit_action_failed', {
+                actionId,
+                visitId: selectedVisitId,
+                siteId: selectedSiteId,
+                message,
+            });
+        } finally {
+            setPendingVisitActionId(null);
+        }
     }
 
     const selectedSiteDetail = useMemo(() => {
@@ -184,8 +260,8 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
             return null;
         }
 
-        return buildSiteDetailModel(site, MOCK_WORKBOARD_CONTEXT);
-    }, [filteredSites, selectedSiteId]);
+        return buildSiteDetailModel(site, workboardContext);
+    }, [filteredSites, selectedSiteId, workboardContext]);
 
     const selectedVisitDetail = useMemo(() => {
         if (!selectedSiteId || !selectedVisitId) {
@@ -198,8 +274,8 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
             return null;
         }
 
-        return buildVisitDetailModel(visit, MOCK_WORKBOARD_CONTEXT);
-    }, [filteredSites, selectedSiteId, selectedVisitId]);
+        return buildVisitDetailModel(visit, workboardContext);
+    }, [filteredSites, selectedSiteId, selectedVisitId, workboardContext]);
 
     return {
         sites,
@@ -221,10 +297,14 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
         selectedVisitId,
         selectedSiteDetail,
         selectedVisitDetail,
+        pendingVisitActionId,
+        visitActionError,
         openSite,
         closeSite,
         openVisit,
         closeVisit,
+        runVisitAction,
+        clearVisitActionError,
         reload,
     };
 }
