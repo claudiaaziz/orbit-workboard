@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackEvent } from '../analytics';
 import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
 import { fetchSites, performVisitAction, WorkboardApiError } from '../data/mockApi';
+import { getVisitFieldState } from '../domain/workboardContext';
 import { isVisitActionEnabled } from '../domain/visitActionMutations';
 import type { VisitActionId } from '../domain/visitActions';
+import { applyVisitEvidenceCapture } from '../domain/visitEvidence';
 import { buildSiteDetailModel } from '../domain/siteDetail';
 import type { SiteDetailModel } from '../domain/siteDetail';
 import { buildVisitDetailModel } from '../domain/visitDetail';
@@ -54,14 +56,21 @@ type UseWorkboardSitesResult = {
     closeVisit: () => void;
     runVisitAction: (actionId: VisitActionId) => void;
     clearVisitActionError: () => void;
+    isEvidenceCaptureOpen: boolean;
+    isEvidenceRetake: boolean;
+    openEvidenceCapture: (options?: { isRetake?: boolean }) => void;
+    closeEvidenceCapture: () => void;
+    saveVisitEvidence: (localUri: string, options: { isRetake: boolean }) => void;
     reload: (options?: { isRefresh?: boolean }) => void;
 };
 
 export function useWorkboardSites(): UseWorkboardSitesResult {
     const [sites, setSites] = useState<ServiceSite[]>([]);
-    const [workboardContext] = useState<WorkboardContext>(() =>
+    const [workboardContext, setWorkboardContext] = useState<WorkboardContext>(() =>
         structuredClone(MOCK_WORKBOARD_CONTEXT),
     );
+    const [isEvidenceCaptureOpen, setIsEvidenceCaptureOpen] = useState(false);
+    const [isEvidenceRetake, setIsEvidenceRetake] = useState(false);
     const [filters, setFilters] = useState<WorkboardFilters>(DEFAULT_WORKBOARD_FILTERS);
     const [loadState, setLoadState] = useState<WorkboardLoadState>('idle');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -190,10 +199,58 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
     function closeVisit() {
         setSelectedVisitId(null);
         setVisitActionError(null);
+        setIsEvidenceCaptureOpen(false);
+        setIsEvidenceRetake(false);
     }
 
     function clearVisitActionError() {
         setVisitActionError(null);
+    }
+
+    function openEvidenceCapture(options?: { isRetake?: boolean }) {
+        if (!selectedVisitId) {
+            return;
+        }
+
+        setIsEvidenceRetake(options?.isRetake === true);
+        setIsEvidenceCaptureOpen(true);
+    }
+
+    function closeEvidenceCapture() {
+        setIsEvidenceCaptureOpen(false);
+        setIsEvidenceRetake(false);
+    }
+
+    function saveVisitEvidence(localUri: string, options: { isRetake: boolean }) {
+        if (!selectedVisitId) {
+            return;
+        }
+
+        const visitId = selectedVisitId;
+        const capturedAt = new Date().toISOString();
+
+        setWorkboardContext((current) => {
+            const previous = getVisitFieldState(current, visitId);
+
+            return {
+                visits: {
+                    ...current.visits,
+                    [visitId]: applyVisitEvidenceCapture(previous, {
+                        localUri,
+                        capturedAt,
+                    }),
+                },
+            };
+        });
+
+        if (options.isRetake) {
+            trackEvent('evidence_retaken', { visitId });
+        } else {
+            trackEvent('evidence_photo_captured', { visitId });
+        }
+
+        trackEvent('evidence_upload_queued', { visitId });
+        closeEvidenceCapture();
     }
 
     async function runVisitAction(actionId: VisitActionId) {
@@ -305,6 +362,11 @@ export function useWorkboardSites(): UseWorkboardSitesResult {
         closeVisit,
         runVisitAction,
         clearVisitActionError,
+        isEvidenceCaptureOpen,
+        isEvidenceRetake,
+        openEvidenceCapture,
+        closeEvidenceCapture,
+        saveVisitEvidence,
         reload,
     };
 }

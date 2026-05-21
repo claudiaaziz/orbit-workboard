@@ -33,6 +33,8 @@ export type MotionCheckResult = 'stable' | 'rough_motion_detected';
 
 export type VisitFieldState = {
     hasRequiredEvidenceCaptured?: boolean;
+    evidencePhotoUri?: string;
+    evidenceCapturedAt?: string;
     assetScanResult?: AssetScanResult;
     uploadStatus?: UploadStatus;
     motionResult?: MotionCheckResult;

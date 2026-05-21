@@ -49,6 +49,11 @@ export function ProviderWorkboardScreen() {
         closeVisit,
         runVisitAction,
         clearVisitActionError,
+        isEvidenceCaptureOpen,
+        isEvidenceRetake,
+        openEvidenceCapture,
+        closeEvidenceCapture,
+        saveVisitEvidence,
         reload,
     } = useWorkboardSites();
 
@@ -145,6 +150,11 @@ export function ProviderWorkboardScreen() {
                 onCloseVisit={closeVisit}
                 onRunVisitAction={(actionId) => void runVisitAction(actionId)}
                 onDismissVisitActionError={clearVisitActionError}
+                isEvidenceCaptureOpen={isEvidenceCaptureOpen}
+                isEvidenceRetake={isEvidenceRetake}
+                onOpenEvidenceCapture={openEvidenceCapture}
+                onCloseEvidenceCapture={closeEvidenceCapture}
+                onSaveVisitEvidence={saveVisitEvidence}
             />
         </SafeAreaView>
     );

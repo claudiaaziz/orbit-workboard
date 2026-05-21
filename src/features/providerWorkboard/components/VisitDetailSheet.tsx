@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     Modal,
     Pressable,
     ScrollView,
@@ -17,6 +18,7 @@ import {
 } from '../domain/visitActionMutations';
 import type { VisitActionId } from '../domain/visitActions';
 import type { VisitChecklistItem, VisitDetailModel } from '../domain/visitDetail';
+import { VisitEvidenceCaptureOverlay } from '../native/VisitEvidenceCaptureOverlay';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
@@ -48,9 +50,14 @@ type VisitDetailSheetProps = {
     model: VisitDetailModel | null;
     pendingVisitActionId: VisitActionId | null;
     visitActionError: string | null;
+    isEvidenceCaptureOpen: boolean;
+    isEvidenceRetake: boolean;
     onClose: () => void;
     onRunVisitAction: (actionId: VisitActionId) => void;
     onDismissVisitActionError: () => void;
+    onOpenEvidenceCapture: (options?: { isRetake?: boolean }) => void;
+    onCloseEvidenceCapture: () => void;
+    onSaveVisitEvidence: (localUri: string, options: { isRetake: boolean }) => void;
 };
 
 export function VisitDetailSheet({
@@ -58,9 +65,14 @@ export function VisitDetailSheet({
     model,
     pendingVisitActionId,
     visitActionError,
+    isEvidenceCaptureOpen,
+    isEvidenceRetake,
     onClose,
     onRunVisitAction,
     onDismissVisitActionError,
+    onOpenEvidenceCapture,
+    onCloseEvidenceCapture,
+    onSaveVisitEvidence,
 }: VisitDetailSheetProps) {
     function handleActionPress(actionId: VisitActionId, enabled: boolean) {
         if (!enabled || pendingVisitActionId !== null) {
@@ -91,6 +103,16 @@ export function VisitDetailSheet({
         >
             {model ? (
                 <SafeAreaView style={styles.sheet} edges={['top', 'bottom']}>
+                    {isEvidenceCaptureOpen ? (
+                        <VisitEvidenceCaptureOverlay
+                            equipmentLabel={model.equipmentLabel}
+                            isRetake={isEvidenceRetake}
+                            onClose={onCloseEvidenceCapture}
+                            onCaptured={(localUri, options) =>
+                                onSaveVisitEvidence(localUri, options)
+                            }
+                        />
+                    ) : null}
                     <View style={styles.header}>
                         <View style={styles.headerText}>
                             <Text style={styles.equipmentLabel}>{model.equipmentLabel}</Text>
@@ -131,10 +153,55 @@ export function VisitDetailSheet({
                             </Section>
                         ) : null}
 
-                        <Section title="Evidence checklist">
+                        <Section title="Evidence">
                             {model.evidenceChecklist.map((item) => (
                                 <ChecklistRow key={item.label} item={item} />
                             ))}
+                            {model.evidencePhotoUri ? (
+                                <Image
+                                    source={{ uri: model.evidencePhotoUri }}
+                                    style={styles.evidencePreview}
+                                    accessibilityLabel="Captured visit evidence photo"
+                                />
+                            ) : null}
+                            {model.evidenceCapturedAtLabel ? (
+                                <Text style={styles.mutedText}>
+                                    Captured {model.evidenceCapturedAtLabel}
+                                </Text>
+                            ) : null}
+                            {model.evidenceRequired ? (
+                                <View style={styles.evidenceActions}>
+                                    {!model.evidencePhotoUri ? (
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Capture visit evidence photo"
+                                            onPress={() => onOpenEvidenceCapture()}
+                                            style={({ pressed }) => [
+                                                styles.evidencePrimaryButton,
+                                                pressed && styles.evidenceButtonPressed,
+                                            ]}
+                                        >
+                                            <Text style={styles.evidencePrimaryLabel}>
+                                                Capture evidence photo
+                                            </Text>
+                                        </Pressable>
+                                    ) : (
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Retake visit evidence photo"
+                                            onPress={() => onOpenEvidenceCapture({ isRetake: true })}
+                                            style={({ pressed }) => [
+                                                styles.evidenceSecondaryButton,
+                                                pressed && styles.evidenceButtonPressed,
+                                            ]}
+                                        >
+                                            <Text style={styles.evidenceSecondaryLabel}>
+                                                Retake photo
+                                            </Text>
+                                        </Pressable>
+                                    )}
+                                </View>
+                            ) : null}
                         </Section>
 
                         <Section title="Asset scan">
@@ -225,6 +292,46 @@ const styles = StyleSheet.create({
     sheet: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+        position: 'relative',
+    },
+    evidencePreview: {
+        width: '100%',
+        height: 180,
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
+    },
+    evidenceActions: {
+        marginTop: 4,
+    },
+    evidencePrimaryButton: {
+        minHeight: 44,
+        borderRadius: 10,
+        backgroundColor: '#1D4ED8',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+    },
+    evidencePrimaryLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    evidenceSecondaryButton: {
+        minHeight: 44,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+    },
+    evidenceSecondaryLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1D4ED8',
+    },
+    evidenceButtonPressed: {
+        opacity: 0.85,
     },
     header: {
         flexDirection: 'row',

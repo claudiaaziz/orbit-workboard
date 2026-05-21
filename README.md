@@ -25,6 +25,14 @@ pnpm start
 
 Visit actions succeed by default. The hook passes its `workboardContext` into `performVisitAction` so API eligibility matches the UI. To demo the error banner and retry flow, call `performVisitAction` with `simulateFailure: true` (see `data/mockApi.ts`).
 
+### Camera evidence (§6)
+
+- Open a visit that requires proof (e.g. **site-edge-001** → **visit-site-edge-001-2**).
+- Tap **Capture evidence photo** → allow camera when prompted → **Take photo** → **Use photo**.
+- Checklist turns complete; **Complete visit** can unlock after you are on site with scan/motion satisfied.
+- **Retake photo** reopens the camera overlay.
+- On simulator or if permission is denied: **Use placeholder photo (simulator / dev)** saves bundled placeholder evidence (documented fallback per spec).
+
 ### Adding dependencies
 
 Use **pnpm** for installs and **Expo** for native/SDK-aligned versions:

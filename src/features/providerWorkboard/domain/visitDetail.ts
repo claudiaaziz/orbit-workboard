@@ -21,6 +21,9 @@ export type VisitDetailModel = {
     assignedTechLabel: string | null;
     issueOrBlockedLabel: string | null;
     lastUpdatedLabel: string;
+    evidenceRequired: boolean;
+    evidencePhotoUri: string | null;
+    evidenceCapturedAtLabel: string | null;
     evidenceChecklist: VisitChecklistItem[];
     assetScanLabel: string;
     motionCheckLabel: string;
@@ -125,6 +128,9 @@ export function buildVisitDetailModel(
     visit: ServiceVisit,
     context: WorkboardContext,
 ): VisitDetailModel {
+    const fieldState = getVisitFieldState(context, visit.id);
+    const evidencePhotoUri = fieldState.evidencePhotoUri ?? null;
+
     return {
         visitId: visit.id,
         equipmentLabel: visit.equipmentLabel,
@@ -137,6 +143,11 @@ export function buildVisitDetailModel(
         assignedTechLabel: visit.assignedTech ?? null,
         issueOrBlockedLabel: buildIssueOrBlockedLabel(visit),
         lastUpdatedLabel: formatLastUpdated(visit.lastUpdatedAt),
+        evidenceRequired: visit.evidenceRequired,
+        evidencePhotoUri,
+        evidenceCapturedAtLabel: fieldState.evidenceCapturedAt
+            ? formatLastUpdated(fieldState.evidenceCapturedAt)
+            : null,
         evidenceChecklist: buildEvidenceChecklist(visit, context),
         assetScanLabel: buildAssetScanLabel(visit, context),
         motionCheckLabel: buildMotionCheckLabel(visit, context),

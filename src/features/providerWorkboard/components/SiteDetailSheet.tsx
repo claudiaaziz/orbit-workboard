@@ -82,6 +82,11 @@ type SiteDetailSheetProps = {
     onCloseVisit: () => void;
     onRunVisitAction: (actionId: VisitActionId) => void;
     onDismissVisitActionError: () => void;
+    isEvidenceCaptureOpen: boolean;
+    isEvidenceRetake: boolean;
+    onOpenEvidenceCapture: (options?: { isRetake?: boolean }) => void;
+    onCloseEvidenceCapture: () => void;
+    onSaveVisitEvidence: (localUri: string, options: { isRetake: boolean }) => void;
 };
 
 
@@ -96,6 +101,11 @@ export function SiteDetailSheet({
     onCloseVisit,
     onRunVisitAction,
     onDismissVisitActionError,
+    isEvidenceCaptureOpen,
+    isEvidenceRetake,
+    onOpenEvidenceCapture,
+    onCloseEvidenceCapture,
+    onSaveVisitEvidence,
 }: SiteDetailSheetProps) {
     return (
         <Modal
@@ -194,9 +204,14 @@ export function SiteDetailSheet({
                         model={visitDetail}
                         pendingVisitActionId={pendingVisitActionId}
                         visitActionError={visitActionError}
+                        isEvidenceCaptureOpen={isEvidenceCaptureOpen}
+                        isEvidenceRetake={isEvidenceRetake}
                         onClose={onCloseVisit}
                         onRunVisitAction={onRunVisitAction}
                         onDismissVisitActionError={onDismissVisitActionError}
+                        onOpenEvidenceCapture={onOpenEvidenceCapture}
+                        onCloseEvidenceCapture={onCloseEvidenceCapture}
+                        onSaveVisitEvidence={onSaveVisitEvidence}
                     />
                 </SafeAreaView>
             ) : null}
