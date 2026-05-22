@@ -9,7 +9,6 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Alert } from 'react-native';
 
 import { trackEvent } from '../analytics';
-import { ensureCameraPermission } from '../native/ensureCameraPermission';
 import { performVisitAction, WorkboardApiError } from '../data/mockApi';
 import { getVisitFieldState } from '../domain/workboardContext';
 import { isVisitActionEnabled } from '../domain/visitActionMutations';
@@ -138,15 +137,12 @@ export function useVisitFieldWorkflow({
         }
     }
 
-    async function scanAssetWithCamera() {
+    function scanAssetWithCamera() {
         if (!selectedVisitId || !findVisitById(selectedVisitId)) {
             return;
         }
 
-        const granted = await ensureCameraPermission('visit_asset_scan');
-        if (granted) {
-            setIsAssetScanOpen(true);
-        }
+        setIsAssetScanOpen(true);
     }
 
     function saveAssetScan(scannedCode: string): 'match' | 'mismatch' | null {

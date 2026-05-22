@@ -1,17 +1,11 @@
-import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { hasActiveFilters } from '../domain/workboardFilters';
 import {
-    countPanelFilters,
-    getActiveFilterPills,
-    type ActiveFilterPill,
+    DATE_SCOPE_FILTER_OPTIONS,
+    EVIDENCE_FILTER_OPTIONS,
+    WORK_STATUS_FILTER_OPTIONS,
+    type FilterOption,
 } from '../domain/workboardFilterLabels';
 import type {
     DateScopeFilter,
@@ -19,9 +13,6 @@ import type {
     WorkboardFilters,
     WorkStatus,
 } from '../types';
-import { DEFAULT_WORKBOARD_FILTERS } from '../types';
-
-import { WorkboardFiltersSheet } from './WorkboardFiltersSheet';
 
 type WorkboardFilterControlsProps = {
     filters: WorkboardFilters;
@@ -33,46 +24,46 @@ type WorkboardFilterControlsProps = {
     onResetPanelFilters: () => void;
 };
 
-type ActiveFilterPillProps = {
+type FilterChipGroupProps<T extends string> = {
     label: string;
-    onRemove: () => void;
+    options: FilterOption<T>[];
+    selectedValue: T;
+    onSelect: (value: T) => void;
 };
 
-function ActiveFilterPillChip({ label, onRemove }: ActiveFilterPillProps) {
+function FilterChipGroup<T extends string>({
+    label,
+    options,
+    selectedValue,
+    onSelect,
+}: FilterChipGroupProps<T>) {
     return (
-        <View style={styles.activePill}>
-            <Text style={styles.activePillLabel}>{label}</Text>
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${label} filter`}
-                hitSlop={6}
-                onPress={onRemove}
-                style={({ pressed }) => [styles.activePillRemove, pressed && styles.activePillRemovePressed]}
-            >
-                <Ionicons name="close" size={16} color="#1E40AF" />
-            </Pressable>
+        <View style={styles.group}>
+            <Text style={styles.groupLabel}>{label}</Text>
+            <View style={styles.chipRow}>
+                {options.map((option) => {
+                    const selected = selectedValue === option.value;
+                    return (
+                        <Pressable
+                            key={option.value}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                            onPress={() => onSelect(option.value)}
+                            style={({ pressed }) => [
+                                styles.chip,
+                                selected && styles.chipSelected,
+                                pressed && styles.chipPressed,
+                            ]}
+                        >
+                            <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                                {option.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
         </View>
     );
-}
-
-function clearFilterPill(
-    pill: ActiveFilterPill,
-    handlers: Pick<
-        WorkboardFilterControlsProps,
-        'onWorkStatusChange' | 'onDateScopeChange' | 'onEvidenceFilterChange'
-    >,
-) {
-    switch (pill.key) {
-        case 'workStatus':
-            handlers.onWorkStatusChange(DEFAULT_WORKBOARD_FILTERS.workStatus);
-            break;
-        case 'dateScope':
-            handlers.onDateScopeChange(DEFAULT_WORKBOARD_FILTERS.dateScope);
-            break;
-        case 'evidenceFilter':
-            handlers.onEvidenceFilterChange(DEFAULT_WORKBOARD_FILTERS.evidenceFilter);
-            break;
-    }
 }
 
 export function WorkboardFilterControls({
@@ -84,172 +75,121 @@ export function WorkboardFilterControls({
     onEvidenceFilterChange,
     onResetPanelFilters,
 }: WorkboardFilterControlsProps) {
-    const [sheetVisible, setSheetVisible] = useState(false);
-    const activePills = getActiveFilterPills(filters);
-    const panelFilterCount = countPanelFilters(filters);
-
-    const pillHandlers = {
-        onWorkStatusChange,
-        onDateScopeChange,
-        onEvidenceFilterChange,
-    };
+    const evidenceSelection = filters.evidenceFilter ?? 'none';
 
     return (
         <View style={styles.container}>
-            <View style={styles.toolbar}>
-                <View style={styles.searchRow}>
-                    <Ionicons
-                        name="search"
-                        size={20}
-                        color="#9CA3AF"
-                        style={styles.searchIcon}
-                    />
-                    <TextInput
-                        accessibilityLabel="Search workboard"
-                        placeholder="Search sites, customers, equipment"
-                        placeholderTextColor="#9CA3AF"
-                        value={filters.searchQuery}
-                        onChangeText={onSearchChange}
-                        onSubmitEditing={(event) => onSearchSubmit(event.nativeEvent.text)}
-                        style={styles.searchInput}
-                        returnKeyType="search"
-                        clearButtonMode="while-editing"
-                    />
-                </View>
+            <TextInput
+                accessibilityLabel="Search workboard"
+                placeholder="Search sites, customers, equipment"
+                placeholderTextColor="#9CA3AF"
+                value={filters.searchQuery}
+                onChangeText={onSearchChange}
+                onSubmitEditing={(event) => onSearchSubmit(event.nativeEvent.text)}
+                style={styles.searchInput}
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+            />
 
+            <FilterChipGroup
+                label="Status"
+                options={WORK_STATUS_FILTER_OPTIONS}
+                selectedValue={filters.workStatus}
+                onSelect={onWorkStatusChange}
+            />
+
+            <FilterChipGroup
+                label="Date"
+                options={DATE_SCOPE_FILTER_OPTIONS}
+                selectedValue={filters.dateScope}
+                onSelect={onDateScopeChange}
+            />
+
+            <FilterChipGroup
+                label="Evidence"
+                options={EVIDENCE_FILTER_OPTIONS}
+                selectedValue={evidenceSelection}
+                onSelect={(value) =>
+                    onEvidenceFilterChange(value === 'none' ? null : value)
+                }
+            />
+
+            {hasActiveFilters(filters) ? (
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={
-                        panelFilterCount > 0
-                            ? `Filters, ${panelFilterCount} active`
-                            : 'Filters'
-                    }
-                    onPress={() => setSheetVisible(true)}
-                    style={({ pressed }) => [styles.filterButton, pressed && styles.filterButtonPressed]}
+                    accessibilityLabel="Reset filters"
+                    onPress={onResetPanelFilters}
+                    style={({ pressed }) => [styles.resetButton, pressed && styles.chipPressed]}
                 >
-                    <Ionicons name="options-outline" size={22} color="#374151" />
-                    {panelFilterCount > 0 ? (
-                        <View style={styles.filterBadge}>
-                            <Text style={styles.filterBadgeText}>{panelFilterCount}</Text>
-                        </View>
-                    ) : null}
+                    <Text style={styles.resetLabel}>Reset filters</Text>
                 </Pressable>
-            </View>
-
-            {activePills.length > 0 ? (
-                <View style={styles.activePillsRow}>
-                    {activePills.map((pill) => (
-                        <ActiveFilterPillChip
-                            key={pill.key}
-                            label={pill.label}
-                            onRemove={() => clearFilterPill(pill, pillHandlers)}
-                        />
-                    ))}
-                </View>
             ) : null}
-
-            <WorkboardFiltersSheet
-                visible={sheetVisible}
-                filters={filters}
-                onClose={() => setSheetVisible(false)}
-                onWorkStatusChange={onWorkStatusChange}
-                onDateScopeChange={onDateScopeChange}
-                onEvidenceFilterChange={onEvidenceFilterChange}
-                onResetPanelFilters={onResetPanelFilters}
-            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        gap: 8,
+        gap: 12,
         paddingBottom: 8,
         paddingHorizontal: 16,
     },
-    toolbar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    searchRow: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
+    searchInput: {
         minHeight: 44,
         borderRadius: 10,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: '#D7DCE3',
         backgroundColor: '#FFFFFF',
-    },
-    searchIcon: {
-        marginLeft: 12,
-    },
-    searchInput: {
-        flex: 1,
-        paddingHorizontal: 10,
-        paddingVertical: 10,
+        paddingHorizontal: 12,
         fontSize: 16,
         color: '#111827',
     },
-    filterButton: {
-        minWidth: 44,
-        minHeight: 44,
-        borderRadius: 10,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#D7DCE3',
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
+    group: {
+        gap: 6,
     },
-    filterButtonPressed: {
-        backgroundColor: '#F3F6FA',
+    groupLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#6B7280',
     },
-    filterBadge: {
-        position: 'absolute',
-        top: 4,
-        right: 4,
-        minWidth: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: '#1D4ED8',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 4,
-    },
-    filterBadgeText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    activePillsRow: {
+    chipRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
     },
-    activePill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 32,
+    chip: {
+        minHeight: 40,
+        justifyContent: 'center',
         borderRadius: 999,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#93B4E8',
+        borderColor: '#D7DCE3',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 14,
+    },
+    chipSelected: {
+        borderColor: '#1D4ED8',
         backgroundColor: '#DBEAFE',
-        paddingLeft: 12,
-        paddingRight: 4,
     },
-    activePillLabel: {
-        fontSize: 13,
+    chipPressed: {
+        opacity: 0.85,
+    },
+    chipLabel: {
+        fontSize: 14,
+        color: '#374151',
+    },
+    chipLabelSelected: {
+        color: '#1D4ED8',
         fontWeight: '600',
-        color: '#1E40AF',
     },
-    activePillRemove: {
-        minWidth: 32,
-        minHeight: 32,
-        alignItems: 'center',
+    resetButton: {
+        alignSelf: 'flex-start',
+        minHeight: 44,
         justifyContent: 'center',
+        paddingHorizontal: 4,
     },
-    activePillRemovePressed: {
-        opacity: 0.7,
+    resetLabel: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1D4ED8',
     },
 });

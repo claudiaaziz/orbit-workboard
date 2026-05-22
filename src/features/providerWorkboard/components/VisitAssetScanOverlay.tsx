@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CameraPermissionScreen } from './CameraPermissionScreen';
 import { classifyAssetScan } from '../domain/assetScan';
+import { useCameraPermissionGate } from '../viewModels/useCameraPermissionGate';
 import type { AssetScanResult } from '../types';
 
 type VisitAssetScanOverlayProps = {
@@ -28,6 +30,7 @@ export function VisitAssetScanOverlay({
     onClose,
     onScanSaved,
 }: VisitAssetScanOverlayProps) {
+    const cameraPermission = useCameraPermissionGate('visit_asset_scan');
     const scanLockedRef = useRef(false);
     const [devCodeInput, setDevCodeInput] = useState('');
     const [scanResult, setScanResult] = useState<{
@@ -57,6 +60,46 @@ export function VisitAssetScanOverlay({
         scanLockedRef.current = false;
         setScanResult(null);
         setDevCodeInput('');
+    }
+
+    const devFallback = (
+        <View style={styles.devSection}>
+            <Text style={styles.devLabel}>
+                Development fallback — enter code if camera scan is unavailable
+            </Text>
+            <TextInput
+                value={devCodeInput}
+                onChangeText={setDevCodeInput}
+                placeholder={expectedAssetCode}
+                placeholderTextColor="#6B7280"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                style={styles.devInput}
+                accessibilityLabel="Development fallback asset code input"
+            />
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Apply development fallback asset code"
+                onPress={() => handleBarcodeScanned(devCodeInput)}
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            >
+                <Text style={styles.secondaryLabel}>Apply code (dev)</Text>
+            </Pressable>
+        </View>
+    );
+
+    if (!cameraPermission.isGranted) {
+        return (
+            <CameraPermissionScreen
+                source="visit_asset_scan"
+                title="Camera access"
+                onClose={onClose}
+                isLoading={cameraPermission.isLoading}
+                canAskAgain={cameraPermission.canAskAgain}
+                onAllow={cameraPermission.requestAccess}
+                footer={devFallback}
+            />
+        );
     }
 
     if (scanResult) {
@@ -149,32 +192,7 @@ export function VisitAssetScanOverlay({
                         />
                     </View>
 
-                    <View style={styles.devSection}>
-                        <Text style={styles.devLabel}>
-                            Development fallback — enter code if camera scan is unavailable
-                        </Text>
-                        <TextInput
-                            value={devCodeInput}
-                            onChangeText={setDevCodeInput}
-                            placeholder={expectedAssetCode}
-                            placeholderTextColor="#6B7280"
-                            autoCapitalize="characters"
-                            autoCorrect={false}
-                            style={styles.devInput}
-                            accessibilityLabel="Development fallback asset code input"
-                        />
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Apply development fallback asset code"
-                            onPress={() => handleBarcodeScanned(devCodeInput)}
-                            style={({ pressed }) => [
-                                styles.secondaryButton,
-                                pressed && styles.pressed,
-                            ]}
-                        >
-                            <Text style={styles.secondaryLabel}>Apply code (dev)</Text>
-                        </Pressable>
-                    </View>
+                    {devFallback}
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -262,10 +280,7 @@ const styles = StyleSheet.create({
     devSection: {
         gap: 8,
         paddingHorizontal: 16,
-        paddingBottom: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#374151',
-        paddingTop: 12,
+        paddingTop: 8,
     },
     devLabel: {
         fontSize: 12,

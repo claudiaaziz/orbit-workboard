@@ -1,7 +1,9 @@
-// permission prompts, camera preview, photo review.
-import { CameraView, useCameraPermissions } from 'expo-camera';
+/**
+ * Visit evidence capture UI. Camera permission: useCameraPermissionGate + CameraPermissionScreen.
+ */
+import { CameraView } from 'expo-camera';
 import type { CameraView as CameraViewType } from 'expo-camera';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -13,12 +15,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CameraPermissionScreen } from './CameraPermissionScreen';
+import { useCameraPermissionGate } from '../viewModels/useCameraPermissionGate';
 import { captureEvidencePhoto } from '../native/captureEvidencePhoto';
-import { ensureCameraPermission } from '../native/ensureCameraPermission';
 
 const PLACEHOLDER_EVIDENCE = require('../../../../assets/icon.png');
-
-type CaptureStep = 'permission' | 'camera' | 'preview';
 
 function getPlaceholderEvidenceUri(): string {
     return Image.resolveAssetSource(PLACEHOLDER_EVIDENCE).uri;
@@ -38,24 +39,11 @@ export function VisitEvidenceCaptureOverlay({
     isRetake,
 }: VisitEvidenceCaptureOverlayProps) {
     const cameraRef = useRef<CameraViewType>(null);
-    const [permission, requestPermission] = useCameraPermissions();
-    const [step, setStep] = useState<CaptureStep>('permission');
+    const cameraPermission = useCameraPermissionGate('visit_evidence_capture');
     const [cameraReady, setCameraReady] = useState(false);
     const [previewUri, setPreviewUri] = useState<string | null>(null);
     const [captureError, setCaptureError] = useState<string | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
-
-    useEffect(() => {
-        setStep(permission?.granted ? 'camera' : 'permission');
-    }, [permission?.granted]);
-
-    async function handleRequestPermission() {
-        const granted = await ensureCameraPermission('visit_evidence_capture');
-        if (granted) {
-            await requestPermission();
-            setStep('camera');
-        }
-    }
 
     async function handleTakePhoto() {
         if (isCapturing) {
@@ -78,31 +66,27 @@ export function VisitEvidenceCaptureOverlay({
             }
 
             setPreviewUri(result.uri);
-            setStep('preview');
         } finally {
             setIsCapturing(false);
         }
-    }
-
-    function handleUsePhoto() {
-        if (!previewUri) {
-            return;
-        }
-
-        onCaptured(previewUri, { isRetake });
-    }
-
-    function handleRetakePreview() {
-        setPreviewUri(null);
-        setStep('camera');
-        setCaptureError(null);
     }
 
     function handleSimulatorFallback() {
         onCaptured(getPlaceholderEvidenceUri(), { isRetake });
     }
 
-    if (step === 'preview' && previewUri) {
+    const placeholderFooter = (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Use placeholder evidence for simulator"
+            onPress={handleSimulatorFallback}
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+        >
+            <Text style={styles.secondaryLabel}>Use placeholder photo (simulator / dev)</Text>
+        </Pressable>
+    );
+
+    if (previewUri) {
         return (
             <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
                 <View style={styles.header}>
@@ -126,7 +110,10 @@ export function VisitEvidenceCaptureOverlay({
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="Retake photo"
-                        onPress={handleRetakePreview}
+                        onPress={() => {
+                            setPreviewUri(null);
+                            setCaptureError(null);
+                        }}
                         style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                     >
                         <Text style={styles.secondaryLabel}>Retake</Text>
@@ -134,7 +121,7 @@ export function VisitEvidenceCaptureOverlay({
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="Use photo as visit evidence"
-                        onPress={handleUsePhoto}
+                        onPress={() => onCaptured(previewUri, { isRetake })}
                         style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
                     >
                         <Text style={styles.primaryLabel}>Use photo</Text>
@@ -144,60 +131,17 @@ export function VisitEvidenceCaptureOverlay({
         );
     }
 
-    if (step === 'permission' && !permission?.granted) {
+    if (!cameraPermission.isGranted) {
         return (
-            <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Camera access</Text>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Close evidence capture"
-                        onPress={onClose}
-                        hitSlop={8}
-                    >
-                        <Text style={styles.link}>Cancel</Text>
-                    </Pressable>
-                </View>
-                <View style={styles.permissionBody}>
-                    {!permission ? (
-                        <ActivityIndicator size="large" color="#1D4ED8" />
-                    ) : (
-                        <>
-                            <Text style={styles.bodyText}>
-                                {permission.canAskAgain
-                                    ? 'Camera access is required to capture visit evidence for the field record.'
-                                    : 'Camera access was denied. Enable camera in Settings, or use the simulator fallback below.'}
-                            </Text>
-                            {permission.canAskAgain ? (
-                                <Pressable
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Allow camera access"
-                                    onPress={() => void handleRequestPermission()}
-                                    style={({ pressed }) => [
-                                        styles.primaryButton,
-                                        pressed && styles.pressed,
-                                    ]}
-                                >
-                                    <Text style={styles.primaryLabel}>Allow camera</Text>
-                                </Pressable>
-                            ) : null}
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel="Use placeholder evidence for simulator"
-                                onPress={handleSimulatorFallback}
-                                style={({ pressed }) => [
-                                    styles.secondaryButton,
-                                    pressed && styles.pressed,
-                                ]}
-                            >
-                                <Text style={styles.secondaryLabel}>
-                                    Use placeholder photo (simulator / dev)
-                                </Text>
-                            </Pressable>
-                        </>
-                    )}
-                </View>
-            </SafeAreaView>
+            <CameraPermissionScreen
+                source="visit_evidence_capture"
+                title="Camera access"
+                onClose={onClose}
+                isLoading={cameraPermission.isLoading}
+                canAskAgain={cameraPermission.canAskAgain}
+                onAllow={cameraPermission.requestAccess}
+                footer={placeholderFooter}
+            />
         );
     }
 
@@ -289,17 +233,6 @@ const styles = StyleSheet.create({
         color: '#93C5FD',
         minHeight: 44,
         lineHeight: 44,
-    },
-    permissionBody: {
-        flex: 1,
-        justifyContent: 'center',
-        gap: 16,
-        paddingHorizontal: 20,
-    },
-    bodyText: {
-        fontSize: 15,
-        color: '#E5E7EB',
-        lineHeight: 22,
     },
     cameraFrame: {
         flex: 1,
