@@ -31,10 +31,18 @@ export type AssetScanResult = 'match' | 'mismatch';
 /** Capture, scan, and upload state for a visit (not on the schedule API model yet). */
 export type MotionCheckResult = 'stable' | 'rough_motion_detected';
 
+/** Motion + timestamp snapshot attached to evidence at capture */
+export type MotionEvidenceMetadata = {
+    capturedAt: string;
+    motionResult?: MotionCheckResult;
+    motionMaxDeviationG?: number;
+};
+
 export type VisitFieldState = {
     hasRequiredEvidenceCaptured?: boolean;
     evidencePhotoUri?: string;
     evidenceCapturedAt?: string;
+    motionEvidenceMetadata?: MotionEvidenceMetadata;
     assetScanResult?: AssetScanResult;
     scannedAssetCode?: string;
     uploadStatus?: UploadStatus;

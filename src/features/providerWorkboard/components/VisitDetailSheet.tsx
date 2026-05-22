@@ -196,6 +196,11 @@ export function VisitDetailSheet({
                                     Captured {model.evidenceCapturedAtLabel}
                                 </Text>
                             ) : null}
+                            {model.motionEvidenceMetadataLabel ? (
+                                <Text style={styles.mutedText}>
+                                    {model.motionEvidenceMetadataLabel}
+                                </Text>
+                            ) : null}
                             {model.evidenceRequired ? (
                                 <View style={styles.evidenceActions}>
                                     {!model.evidencePhotoUri ? (

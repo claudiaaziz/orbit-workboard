@@ -100,6 +100,10 @@ export function useVisitFieldWorkflow({
                     [visitId]: applyVisitEvidenceCapture(previous, {
                         localUri,
                         capturedAt,
+                        motionSnapshot: {
+                            motionResult: previous.motionResult,
+                            motionMaxDeviationG: previous.motionMaxDeviationG,
+                        },
                     }),
                 },
             };

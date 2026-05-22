@@ -24,6 +24,7 @@ export type VisitDetailModel = {
     evidenceRequired: boolean;
     evidencePhotoUri: string | null;
     evidenceCapturedAtLabel: string | null;
+    motionEvidenceMetadataLabel: string | null;
     evidenceChecklist: VisitChecklistItem[];
     expectedAssetCode: string;
     assetScanResult: AssetScanResult | null;
@@ -92,6 +93,31 @@ function buildMotionCheckLabel(visit: ServiceVisit, context: WorkboardContext): 
     return 'Motion check not completed yet';
 }
 
+function buildMotionEvidenceMetadataLabel(
+    fieldState: ReturnType<typeof getVisitFieldState>,
+): string | null {
+    const metadata = fieldState.motionEvidenceMetadata;
+    if (!metadata) {
+        return null;
+    }
+
+    const parts: string[] = [];
+
+    if (metadata.motionResult === 'stable') {
+        parts.push('Motion at capture: stable');
+    } else if (metadata.motionResult === 'rough_motion_detected') {
+        parts.push('Motion at capture: rough handling');
+    } else {
+        parts.push('Motion at capture: not recorded');
+    }
+
+    if (metadata.motionMaxDeviationG !== undefined) {
+        parts.push(`peak deviation ${metadata.motionMaxDeviationG.toFixed(3)}g`);
+    }
+
+    return parts.join(' · ');
+}
+
 function buildUploadStatusLabel(visit: ServiceVisit, context: WorkboardContext): string {
     const uploadStatus = getVisitFieldState(context, visit.id).uploadStatus;
 
@@ -151,6 +177,7 @@ export function buildVisitDetailModel(
         evidenceCapturedAtLabel: fieldState.evidenceCapturedAt
             ? formatLastUpdated(fieldState.evidenceCapturedAt)
             : null,
+        motionEvidenceMetadataLabel: buildMotionEvidenceMetadataLabel(fieldState),
         evidenceChecklist: buildEvidenceChecklist(visit, context),
         expectedAssetCode: visit.expectedAssetCode,
         assetScanResult: fieldState.assetScanResult ?? null,

@@ -1,4 +1,3 @@
-import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
 import { buildMockSites, MOCK_SITES } from '../data/mockSites';
 import type { ServiceSite, ServiceVisit } from '../types';
 import { EMPTY_WORKBOARD_CONTEXT } from './workboardContext';
@@ -36,11 +35,7 @@ describe('siteDetail', () => {
         const site = buildMockSites(REFERENCE_DATE).find((entry) => entry.id === 'site-edge-001');
         expect(site).toBeDefined();
 
-        const model = buildSiteDetailModel(
-            site!,
-            MOCK_WORKBOARD_CONTEXT,
-            REFERENCE_DATE,
-        );
+        const model = buildSiteDetailModel(site!, EMPTY_WORKBOARD_CONTEXT, REFERENCE_DATE);
 
         expect(model.statusSentence).toContain('because');
         expect(model.statusSentence).toContain('it is marked urgent');
@@ -90,11 +85,7 @@ describe('siteDetail', () => {
         const site = MOCK_SITES.find((entry) => entry.id === 'site-edge-002');
         expect(site).toBeDefined();
 
-        const model = buildSiteDetailModel(
-            site!,
-            MOCK_WORKBOARD_CONTEXT,
-            REFERENCE_DATE,
-        );
+        const model = buildSiteDetailModel(site!, EMPTY_WORKBOARD_CONTEXT, REFERENCE_DATE);
 
         expect(model.hardwareWarnings).toContain('1 visit requires camera evidence');
     });
@@ -103,11 +94,7 @@ describe('siteDetail', () => {
         const site = MOCK_SITES.find((entry) => entry.id === 'site-edge-001');
         expect(site).toBeDefined();
 
-        const model = buildSiteDetailModel(
-            site!,
-            MOCK_WORKBOARD_CONTEXT,
-            REFERENCE_DATE,
-        );
+        const model = buildSiteDetailModel(site!, EMPTY_WORKBOARD_CONTEXT, REFERENCE_DATE);
 
         expect(model.evidenceSummary).toContain('visits require proof');
         expect(model.evidenceSummary).toContain('still needed');
@@ -136,11 +123,7 @@ describe('siteDetail', () => {
         const site = MOCK_SITES.find((entry) => entry.id === 'site-edge-002');
         expect(site).toBeDefined();
 
-        const model = buildSiteDetailModel(
-            site!,
-            MOCK_WORKBOARD_CONTEXT,
-            REFERENCE_DATE,
-        );
+        const model = buildSiteDetailModel(site!, EMPTY_WORKBOARD_CONTEXT, REFERENCE_DATE);
 
         expect(model.evidenceSummary).toContain('1 visit requires proof');
         expect(model.evidenceSummary).not.toContain('1 visits require proof');

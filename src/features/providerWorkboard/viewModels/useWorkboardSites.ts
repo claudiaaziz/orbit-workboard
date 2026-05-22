@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
+import { EMPTY_WORKBOARD_CONTEXT } from '../domain/workboardContext';
 import type { WorkboardContext } from '../types';
 import { useVisitFieldWorkflow } from './useVisitFieldWorkflow';
 import { useWorkboardList } from './useWorkboardList';
@@ -15,7 +15,7 @@ import { useWorkboardSheets } from './useWorkboardSheets';
  */
 export function useWorkboardSites() {
     const [workboardContext, setWorkboardContext] = useState<WorkboardContext>(() =>
-        structuredClone(MOCK_WORKBOARD_CONTEXT),
+        structuredClone(EMPTY_WORKBOARD_CONTEXT),
     );
 
     const list = useWorkboardList(workboardContext);

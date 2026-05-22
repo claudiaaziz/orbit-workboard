@@ -1,5 +1,4 @@
 import { buildMockSites, MOCK_SITES } from '../data/mockSites';
-import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
 import { DEFAULT_WORKBOARD_FILTERS, type ServiceSite, type WorkboardContext } from '../types';
 import { buildWorkboardSummary } from './workboardSummary';
 import {
@@ -8,6 +7,10 @@ import {
     visitMatchesDateScope,
 } from './workboardFilters';
 import { EMPTY_WORKBOARD_CONTEXT } from './workboardContext';
+import {
+    TEST_CONTEXT_SCAN_MISMATCH,
+    TEST_CONTEXT_UPLOAD_QUEUE,
+} from './testWorkboardContext';
 import { visitHasFailedOrQueuedUpload, visitMissingRequiredEvidence } from './utils/visits';
 
 const REFERENCE_DATE = new Date('2030-06-15T12:00:00.000Z');
@@ -97,7 +100,7 @@ describe('workboardFilters', () => {
         const result = filterSites(
             MOCK_SITES,
             { ...DEFAULT_WORKBOARD_FILTERS, evidenceFilter: 'missing_proof' },
-            MOCK_WORKBOARD_CONTEXT,
+            EMPTY_WORKBOARD_CONTEXT,
         );
 
         expect(result.some((site) => site.id === 'site-edge-001')).toBe(true);
@@ -107,7 +110,7 @@ describe('workboardFilters', () => {
         const result = filterSites(
             MOCK_SITES,
             { ...DEFAULT_WORKBOARD_FILTERS, evidenceFilter: 'scan_mismatch' },
-            MOCK_WORKBOARD_CONTEXT,
+            TEST_CONTEXT_SCAN_MISMATCH,
         );
 
         expect(result.some((site) => site.id === 'site-edge-001')).toBe(true);
@@ -130,10 +133,10 @@ describe('workboardSummary', () => {
         const filtered = filterSites(
             sites,
             DEFAULT_WORKBOARD_FILTERS,
-            MOCK_WORKBOARD_CONTEXT,
+            TEST_CONTEXT_UPLOAD_QUEUE,
             REFERENCE_DATE,
         );
-        const summary = buildWorkboardSummary(filtered, MOCK_WORKBOARD_CONTEXT, REFERENCE_DATE);
+        const summary = buildWorkboardSummary(filtered, TEST_CONTEXT_UPLOAD_QUEUE, REFERENCE_DATE);
         const allVisits = filtered.flatMap((site) => site.visits);
 
         expect(summary.totalMatchingSites).toBe(filtered.length);
@@ -149,10 +152,10 @@ describe('workboardSummary', () => {
             ).length,
         );
         expect(summary.visitsMissingEvidence).toBe(
-            countVisitsMissingEvidence(filtered, MOCK_WORKBOARD_CONTEXT),
+            countVisitsMissingEvidence(filtered, TEST_CONTEXT_UPLOAD_QUEUE),
         );
         expect(summary.failedOrQueuedUploads).toBe(
-            countFailedOrQueuedUploads(filtered, MOCK_WORKBOARD_CONTEXT),
+            countFailedOrQueuedUploads(filtered, TEST_CONTEXT_UPLOAD_QUEUE),
         );
         expect(summary.failedOrQueuedUploads).toBeGreaterThan(0);
     });
