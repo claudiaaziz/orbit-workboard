@@ -41,4 +41,42 @@ pnpm start
 - §9 uses evidence metadata (timestamp + motion snapshot), not GPS or a manual location-denied note.
 - §10 uses a stale workboard banner only (not offline banner, upload retry queue, mutation rollback, or persisted evidence queue).
 
-add screenshots and recordings here
+## Screenshots
+
+Captured on iOS via Expo Go.
+
+### Workboard list
+
+Summary header, filters, and virtualized site list.
+
+![Provider workboard](./docs/screenshots/provider-workboard.png)
+
+### Site detail sheet
+
+Site header, visit timeline, and warnings.
+
+![Site detail](./docs/screenshots/site-detail.png)
+
+### Visit detail — evidence and actions
+
+Visit sheet before required field work is complete:
+
+![Visit detail — evidence incomplete](./docs/screenshots/visit-detail-evidence-incomplete.png)
+
+After evidence capture, asset scan, and motion check:
+
+![Visit detail — evidence complete](./docs/screenshots/visit-detail-evidence-complete.png)
+
+### Asset scan
+
+Camera scanner with development fallback input.
+
+![Scan asset code](./docs/screenshots/scan-asset-code-modal.png)
+
+### Motion check
+
+4-second accelerometer capture in progress and stable result.
+
+![Motion check — sampling](./docs/screenshots/checking-motion-modal.png)
+
+![Motion check — stable](./docs/screenshots/motion-modal-success-state.png)
