@@ -14,8 +14,9 @@ import { getVisitFieldState } from '../domain/workboardContext';
 import { isVisitActionEnabled } from '../domain/visitActionMutations';
 import type { VisitActionId } from '../domain/visitActions';
 import { applyAssetScanToFieldState } from '../domain/assetScan';
+import { applyMotionCheckToFieldState } from '../domain/motionCheck';
 import { applyVisitEvidenceCapture } from '../domain/visitEvidence';
-import type { ServiceSite, ServiceVisit, WorkboardContext } from '../types';
+import type { MotionCheckResult, ServiceSite, ServiceVisit, WorkboardContext } from '../types';
 import type { VisitWorkflowProps } from './visitWorkflowTypes';
 
 type UseVisitFieldWorkflowParams = {
@@ -38,6 +39,7 @@ export function useVisitFieldWorkflow({
     const [isEvidenceCaptureOpen, setIsEvidenceCaptureOpen] = useState(false);
     const [isEvidenceRetake, setIsEvidenceRetake] = useState(false);
     const [isAssetScanOpen, setIsAssetScanOpen] = useState(false);
+    const [isMotionCheckOpen, setIsMotionCheckOpen] = useState(false);
     const [pendingVisitActionId, setPendingVisitActionId] = useState<VisitActionId | null>(
         null,
     );
@@ -48,6 +50,7 @@ export function useVisitFieldWorkflow({
         setIsEvidenceCaptureOpen(false);
         setIsEvidenceRetake(false);
         setIsAssetScanOpen(false);
+        setIsMotionCheckOpen(false);
     }
 
     function findVisitById(visitId: string): ServiceVisit | undefined {
@@ -194,22 +197,52 @@ export function useVisitFieldWorkflow({
         return result ?? null;
     }
 
-    function recordMotionCheckStable() {
+    function openMotionCheck() {
+        if (!selectedVisitId) {
+            return;
+        }
+
+        setIsMotionCheckOpen(true);
+    }
+
+    function closeMotionCheck() {
+        setIsMotionCheckOpen(false);
+    }
+
+    function notifyMotionCaptureStarted() {
+        if (!selectedVisitId) {
+            return;
+        }
+
+        trackEvent('motion_check_started', { visitId: selectedVisitId });
+    }
+
+    function saveMotionCheck(result: MotionCheckResult, maxDeviationG: number) {
         if (!selectedVisitId) {
             return;
         }
 
         const visitId = selectedVisitId;
+        const completedAt = new Date().toISOString();
+
         setWorkboardContext((current) => ({
             visits: {
                 ...current.visits,
-                [visitId]: {
-                    ...getVisitFieldState(current, visitId),
-                    motionResult: 'stable',
-                },
+                [visitId]: applyMotionCheckToFieldState(
+                    getVisitFieldState(current, visitId),
+                    result,
+                    maxDeviationG,
+                    completedAt,
+                ),
             },
         }));
-        trackEvent('motion_check_completed', { visitId, result: 'stable' });
+
+        trackEvent('motion_check_completed', {
+            visitId,
+            result,
+            maxDeviationG,
+        });
+        closeMotionCheck();
     }
 
     async function runVisitAction(actionId: VisitActionId) {
@@ -287,7 +320,11 @@ export function useVisitFieldWorkflow({
             save: saveAssetScan,
         },
         motion: {
-            recordStable: recordMotionCheckStable,
+            isOpen: isMotionCheckOpen,
+            open: openMotionCheck,
+            close: closeMotionCheck,
+            save: saveMotionCheck,
+            notifyCaptureStarted: notifyMotionCaptureStarted,
         },
     };
 

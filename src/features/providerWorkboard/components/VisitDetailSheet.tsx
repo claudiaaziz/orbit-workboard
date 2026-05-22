@@ -21,6 +21,7 @@ import type { VisitChecklistItem, VisitDetailModel } from '../domain/visitDetail
 import type { VisitWorkflowProps } from '../viewModels/visitWorkflowTypes';
 import { VisitAssetScanOverlay } from './VisitAssetScanOverlay';
 import { VisitEvidenceCaptureOverlay } from './VisitEvidenceCaptureOverlay';
+import { VisitMotionCheckOverlay } from './VisitMotionCheckOverlay';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
@@ -94,6 +95,11 @@ export function VisitDetailSheet({
             return;
         }
 
+        if (motion.isOpen) {
+            motion.close();
+            return;
+        }
+
         onCloseVisit();
     }
 
@@ -121,6 +127,16 @@ export function VisitDetailSheet({
                             onClose={evidence.close}
                             onCaptured={(localUri, options) =>
                                 evidence.save(localUri, options)
+                            }
+                        />
+                    ) : null}
+                    {motion.isOpen ? (
+                        <VisitMotionCheckOverlay
+                            equipmentLabel={model.equipmentLabel}
+                            onClose={motion.close}
+                            onCaptureStarted={motion.notifyCaptureStarted}
+                            onSaved={(result, maxDeviationG) =>
+                                motion.save(result, maxDeviationG)
                             }
                         />
                     ) : null}
@@ -278,18 +294,18 @@ export function VisitDetailSheet({
                         <Section title="Motion check">
                             <Text style={styles.bodyText}>{model.motionCheckLabel}</Text>
                             {model.motionCheckRequired &&
-                                !model.motionCheckLabel.includes('stable') ? (
+                            !model.motionCheckLabel.includes('stable') ? (
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="Record stable motion check for development"
-                                    onPress={motion.recordStable}
+                                    accessibilityLabel="Run equipment handling motion check"
+                                    onPress={motion.open}
                                     style={({ pressed }) => [
-                                        styles.evidenceSecondaryButton,
+                                        styles.evidencePrimaryButton,
                                         pressed && styles.evidenceButtonPressed,
                                     ]}
                                 >
-                                    <Text style={styles.evidenceSecondaryLabel}>
-                                        Record stable motion (dev)
+                                    <Text style={styles.evidencePrimaryLabel}>
+                                        Run motion check
                                     </Text>
                                 </Pressable>
                             ) : null}

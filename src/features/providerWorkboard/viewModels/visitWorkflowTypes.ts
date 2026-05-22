@@ -7,6 +7,7 @@
  */
 import type { VisitActionId } from '../domain/visitActions';
 import type { VisitDetailModel } from '../domain/visitDetail';
+import type { MotionCheckResult } from '../types';
 
 export type VisitWorkflowProps = {
     actions: {
@@ -29,7 +30,11 @@ export type VisitWorkflowProps = {
         save: (scannedCode: string) => 'match' | 'mismatch' | null;
     };
     motion: {
-        recordStable: () => void;
+        isOpen: boolean;
+        open: () => void;
+        close: () => void;
+        save: (result: MotionCheckResult, maxDeviationG: number) => void;
+        notifyCaptureStarted: () => void;
     };
 };
 

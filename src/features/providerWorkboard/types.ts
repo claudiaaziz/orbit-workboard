@@ -39,6 +39,8 @@ export type VisitFieldState = {
     scannedAssetCode?: string;
     uploadStatus?: UploadStatus;
     motionResult?: MotionCheckResult;
+    motionMaxDeviationG?: number;
+    motionCheckCompletedAt?: string;
 };
 
 export type WorkboardContext = {
@@ -93,7 +95,7 @@ type MotionSample = {
     visitId: string;
     startedAt: string; // ISO timestamp
     completedAt: string; // ISO timestamp
-    maxAccelerationG: number;
+    maxDeviationG: number;
     result: "stable" | "rough_motion_detected";
 };
 
