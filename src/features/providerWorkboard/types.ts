@@ -36,6 +36,7 @@ export type VisitFieldState = {
     evidencePhotoUri?: string;
     evidenceCapturedAt?: string;
     assetScanResult?: AssetScanResult;
+    scannedAssetCode?: string;
     uploadStatus?: UploadStatus;
     motionResult?: MotionCheckResult;
 };

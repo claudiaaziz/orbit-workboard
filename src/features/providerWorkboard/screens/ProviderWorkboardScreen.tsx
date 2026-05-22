@@ -41,19 +41,11 @@ export function ProviderWorkboardScreen() {
         selectedSiteId,
         selectedVisitDetail,
         selectedSiteDetail,
-        pendingVisitActionId,
-        visitActionError,
         openSite,
         closeSite,
         openVisit,
         closeVisit,
-        runVisitAction,
-        clearVisitActionError,
-        isEvidenceCaptureOpen,
-        isEvidenceRetake,
-        openEvidenceCapture,
-        closeEvidenceCapture,
-        saveVisitEvidence,
+        visitWorkflow,
         reload,
     } = useWorkboardSites();
 
@@ -142,19 +134,11 @@ export function ProviderWorkboardScreen() {
             <SiteDetailSheet
                 visible={selectedSiteId !== null}
                 model={selectedSiteDetail}
-                visitDetail={selectedVisitDetail}
-                pendingVisitActionId={pendingVisitActionId}
-                visitActionError={visitActionError}
                 onClose={closeSite}
                 onVisitPress={openVisit}
+                visitDetail={selectedVisitDetail}
+                visitWorkflow={visitWorkflow}
                 onCloseVisit={closeVisit}
-                onRunVisitAction={(actionId) => void runVisitAction(actionId)}
-                onDismissVisitActionError={clearVisitActionError}
-                isEvidenceCaptureOpen={isEvidenceCaptureOpen}
-                isEvidenceRetake={isEvidenceRetake}
-                onOpenEvidenceCapture={openEvidenceCapture}
-                onCloseEvidenceCapture={closeEvidenceCapture}
-                onSaveVisitEvidence={saveVisitEvidence}
             />
         </SafeAreaView>
     );

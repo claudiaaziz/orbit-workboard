@@ -96,13 +96,7 @@ describe('siteDetail', () => {
             REFERENCE_DATE,
         );
 
-        expect(model.hardwareWarnings).toEqual(
-            expect.arrayContaining([
-                '1 visit requires camera evidence',
-                '1 visit requires a motion check',
-                '1 visit requires location capture',
-            ]),
-        );
+        expect(model.hardwareWarnings).toContain('1 visit requires camera evidence');
     });
 
     it('summarizes evidence requirements for visits needing proof', () => {

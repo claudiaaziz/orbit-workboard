@@ -18,6 +18,8 @@ import {
 } from '../domain/visitActionMutations';
 import type { VisitActionId } from '../domain/visitActions';
 import type { VisitChecklistItem, VisitDetailModel } from '../domain/visitDetail';
+import type { VisitWorkflowProps } from '../viewModels/visitWorkflowTypes';
+import { VisitAssetScanOverlay } from '../native/VisitAssetScanOverlay';
 import { VisitEvidenceCaptureOverlay } from '../native/VisitEvidenceCaptureOverlay';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -48,34 +50,20 @@ function ChecklistRow({ item }: { item: VisitChecklistItem }) {
 type VisitDetailSheetProps = {
     visible: boolean;
     model: VisitDetailModel | null;
-    pendingVisitActionId: VisitActionId | null;
-    visitActionError: string | null;
-    isEvidenceCaptureOpen: boolean;
-    isEvidenceRetake: boolean;
-    onClose: () => void;
-    onRunVisitAction: (actionId: VisitActionId) => void;
-    onDismissVisitActionError: () => void;
-    onOpenEvidenceCapture: (options?: { isRetake?: boolean }) => void;
-    onCloseEvidenceCapture: () => void;
-    onSaveVisitEvidence: (localUri: string, options: { isRetake: boolean }) => void;
+    onCloseVisit: () => void;
+    visitWorkflow: VisitWorkflowProps;
 };
 
 export function VisitDetailSheet({
     visible,
     model,
-    pendingVisitActionId,
-    visitActionError,
-    isEvidenceCaptureOpen,
-    isEvidenceRetake,
-    onClose,
-    onRunVisitAction,
-    onDismissVisitActionError,
-    onOpenEvidenceCapture,
-    onCloseEvidenceCapture,
-    onSaveVisitEvidence,
+    onCloseVisit,
+    visitWorkflow,
 }: VisitDetailSheetProps) {
+    const { actions, evidence, scan, motion } = visitWorkflow;
+
     function handleActionPress(actionId: VisitActionId, enabled: boolean) {
-        if (!enabled || pendingVisitActionId !== null) {
+        if (!enabled || actions.pendingVisitActionId !== null) {
             return;
         }
 
@@ -85,13 +73,28 @@ export function VisitDetailSheet({
                 {
                     text: 'Continue',
                     style: actionId === 'cancel_visit' ? 'destructive' : 'default',
-                    onPress: () => onRunVisitAction(actionId),
+                    onPress: () => void actions.run(actionId),
                 },
             ]);
             return;
         }
 
-        onRunVisitAction(actionId);
+        void actions.run(actionId);
+    }
+
+    function handleRequestClose() {
+        // iOS pageSheet swipe dismiss hits this Modal, not the in-sheet overlay.
+        if (evidence.isOpen) {
+            evidence.close();
+            return;
+        }
+
+        if (scan.isOpen) {
+            scan.close();
+            return;
+        }
+
+        onCloseVisit();
     }
 
     return (
@@ -99,17 +102,25 @@ export function VisitDetailSheet({
             visible={visible && model !== null}
             animationType="slide"
             presentationStyle="pageSheet"
-            onRequestClose={onClose}
+            onRequestClose={handleRequestClose}
         >
             {model ? (
                 <SafeAreaView style={styles.sheet} edges={['top', 'bottom']}>
-                    {isEvidenceCaptureOpen ? (
+                    {scan.isOpen ? (
+                        <VisitAssetScanOverlay
+                            expectedAssetCode={model.expectedAssetCode}
+                            equipmentLabel={model.equipmentLabel}
+                            onClose={scan.close}
+                            onScanSaved={(scannedCode) => scan.save(scannedCode)}
+                        />
+                    ) : null}
+                    {evidence.isOpen ? (
                         <VisitEvidenceCaptureOverlay
                             equipmentLabel={model.equipmentLabel}
-                            isRetake={isEvidenceRetake}
-                            onClose={onCloseEvidenceCapture}
+                            isRetake={evidence.isRetake}
+                            onClose={evidence.close}
                             onCaptured={(localUri, options) =>
-                                onSaveVisitEvidence(localUri, options)
+                                evidence.save(localUri, options)
                             }
                         />
                     ) : null}
@@ -123,7 +134,7 @@ export function VisitDetailSheet({
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel="Close visit details"
-                            onPress={onClose}
+                            onPress={onCloseVisit}
                             hitSlop={8}
                             style={({ pressed }) => [styles.closeButton, pressed && styles.closePressed]}
                         >
@@ -175,7 +186,7 @@ export function VisitDetailSheet({
                                         <Pressable
                                             accessibilityRole="button"
                                             accessibilityLabel="Capture visit evidence photo"
-                                            onPress={() => onOpenEvidenceCapture()}
+                                            onPress={() => evidence.open()}
                                             style={({ pressed }) => [
                                                 styles.evidencePrimaryButton,
                                                 pressed && styles.evidenceButtonPressed,
@@ -189,7 +200,7 @@ export function VisitDetailSheet({
                                         <Pressable
                                             accessibilityRole="button"
                                             accessibilityLabel="Retake visit evidence photo"
-                                            onPress={() => onOpenEvidenceCapture({ isRetake: true })}
+                                            onPress={() => evidence.open({ isRetake: true })}
                                             style={({ pressed }) => [
                                                 styles.evidenceSecondaryButton,
                                                 pressed && styles.evidenceButtonPressed,
@@ -206,10 +217,82 @@ export function VisitDetailSheet({
 
                         <Section title="Asset scan">
                             <Text style={styles.bodyText}>{model.assetScanLabel}</Text>
+                            {model.assetScanResult === 'match' ? (
+                                <Text style={styles.scanSuccess}>
+                                    Scan requirement satisfied for this visit.
+                                </Text>
+                            ) : null}
+                            <Text style={styles.mutedText}>
+                                Expected code: {model.expectedAssetCode}
+                            </Text>
+                            {model.assetScanResult === null ? (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Scan asset barcode with device camera"
+                                        onPress={() => void scan.start()}
+                                        style={({ pressed }) => [
+                                            styles.evidencePrimaryButton,
+                                            pressed && styles.evidenceButtonPressed,
+                                        ]}
+                                    >
+                                        <Text style={styles.evidencePrimaryLabel}>
+                                            Scan asset barcode
+                                        </Text>
+                                    </Pressable>
+                                    <Text style={styles.mutedText}>
+                                        Point the scanner at a QR or barcode labeled with the
+                                        expected code above.
+                                    </Text>
+                                </>
+                            ) : (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Rescan asset barcode"
+                                    onPress={() => void scan.start()}
+                                    style={({ pressed }) => [
+                                        model.assetScanResult === 'mismatch'
+                                            ? styles.evidencePrimaryButton
+                                            : styles.evidenceSecondaryButton,
+                                        pressed && styles.evidenceButtonPressed,
+                                    ]}
+                                >
+                                    <Text
+                                        style={
+                                            model.assetScanResult === 'mismatch'
+                                                ? styles.evidencePrimaryLabel
+                                                : styles.evidenceSecondaryLabel
+                                        }
+                                    >
+                                        Rescan
+                                    </Text>
+                                </Pressable>
+                            )}
+                            {model.assetScanResult === 'mismatch' ? (
+                                <Text style={styles.scanWarning}>
+                                    Wrong code saved — rescan before completing.
+                                </Text>
+                            ) : null}
                         </Section>
 
                         <Section title="Motion check">
                             <Text style={styles.bodyText}>{model.motionCheckLabel}</Text>
+                            {model.motionCheckRequired &&
+                                !model.motionCheckLabel.includes('stable') ? (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Record stable motion check for development"
+                                    onPress={motion.recordStable}
+                                    style={({ pressed }) => [
+                                        styles.evidenceSecondaryButton,
+                                        pressed && styles.evidenceButtonPressed,
+                                    ]}
+                                >
+                                    <Text style={styles.evidenceSecondaryLabel}>
+                                        Record stable motion (dev)
+                                    </Text>
+                                </Pressable>
+                            ) : null}
                         </Section>
 
                         <Section title="Upload status">
@@ -217,13 +300,15 @@ export function VisitDetailSheet({
                         </Section>
 
                         <Section title="Actions">
-                            {visitActionError ? (
+                            {actions.visitActionError ? (
                                 <View style={styles.actionErrorBanner}>
-                                    <Text style={styles.actionErrorText}>{visitActionError}</Text>
+                                    <Text style={styles.actionErrorText}>
+                                        {actions.visitActionError}
+                                    </Text>
                                     <Pressable
                                         accessibilityRole="button"
                                         accessibilityLabel="Dismiss action error"
-                                        onPress={onDismissVisitActionError}
+                                        onPress={actions.clearError}
                                         hitSlop={8}
                                     >
                                         <Text style={styles.actionErrorDismiss}>Dismiss</Text>
@@ -234,10 +319,10 @@ export function VisitDetailSheet({
                                 <Text style={styles.mutedText}>No actions available</Text>
                             ) : (
                                 model.availableActions.map((action) => {
-                                    const isPending = pendingVisitActionId === action.id;
+                                    const isPending = actions.pendingVisitActionId === action.id;
                                     const actionDisabled =
                                         !action.enabled ||
-                                        pendingVisitActionId !== null;
+                                        actions.pendingVisitActionId !== null;
 
                                     return (
                                         <View key={action.id} style={styles.actionRow}>
@@ -253,8 +338,8 @@ export function VisitDetailSheet({
                                                     styles.actionButton,
                                                     actionDisabled && styles.actionButtonDisabled,
                                                     pressed &&
-                                                        !actionDisabled &&
-                                                        styles.actionButtonPressed,
+                                                    !actionDisabled &&
+                                                    styles.actionButtonPressed,
                                                 ]}
                                             >
                                                 {isPending ? (
@@ -264,7 +349,7 @@ export function VisitDetailSheet({
                                                         style={[
                                                             styles.actionLabel,
                                                             actionDisabled &&
-                                                                styles.actionLabelDisabled,
+                                                            styles.actionLabelDisabled,
                                                         ]}
                                                     >
                                                         {action.label}
@@ -332,6 +417,16 @@ const styles = StyleSheet.create({
     },
     evidenceButtonPressed: {
         opacity: 0.85,
+    },
+    scanWarning: {
+        fontSize: 13,
+        color: '#9A3412',
+        lineHeight: 18,
+    },
+    scanSuccess: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#047857',
     },
     header: {
         flexDirection: 'row',

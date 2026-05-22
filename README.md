@@ -98,3 +98,4 @@ statemanangent as the app got bigger
 I used a small local async resource layer instead of TanStack Query to keep the take-home focused. The API boundary is still isolated, so replacing the hook with TanStack Query later would be straightforward.
 little ui things like showing 22 out of 24 etc
 I kept state coordination in the useWorkboardSites view model and passed state/callbacks into presentational sheets. I considered context, but the flow is only two sheet layers deep, so explicit props kept the data flow easier to trace for the take-home.
+Complete visit stays disabled until required evidence photo, asset scan match, and motion (when required) are satisfied via the camera flows.

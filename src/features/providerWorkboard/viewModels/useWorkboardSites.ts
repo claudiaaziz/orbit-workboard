@@ -1,372 +1,73 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
-import { trackEvent } from '../analytics';
 import { MOCK_WORKBOARD_CONTEXT } from '../data/mockWorkboardContext';
-import { fetchSites, performVisitAction, WorkboardApiError } from '../data/mockApi';
-import { getVisitFieldState } from '../domain/workboardContext';
-import { isVisitActionEnabled } from '../domain/visitActionMutations';
-import type { VisitActionId } from '../domain/visitActions';
-import { applyVisitEvidenceCapture } from '../domain/visitEvidence';
-import { buildSiteDetailModel } from '../domain/siteDetail';
-import type { SiteDetailModel } from '../domain/siteDetail';
-import { buildVisitDetailModel } from '../domain/visitDetail';
-import type { VisitDetailModel } from '../domain/visitDetail';
-import { buildSiteListItem } from '../domain/siteSummary';
-import { filterSites, hasActiveFilters } from '../domain/workboardFilters';
-import { buildWorkboardSummary } from '../domain/workboardSummary';
-import type { WorkboardSummaryModel } from '../domain/workboardSummary';
-import type { SiteListItemModel } from '../domain/siteSummary';
-import type {
-    DateScopeFilter,
-    EvidenceFilter,
-    ServiceSite,
-    WorkboardContext,
-    WorkboardFilters,
-    WorkStatus,
-} from '../types';
-import { DEFAULT_WORKBOARD_FILTERS } from '../types';
+import type { WorkboardContext } from '../types';
+import { useVisitFieldWorkflow } from './useVisitFieldWorkflow';
+import { useWorkboardList } from './useWorkboardList';
+import { useWorkboardSheets } from './useWorkboardSheets';
 
-type WorkboardLoadState = 'idle' | 'loading' | 'success' | 'error';
-
-type UseWorkboardSitesResult = {
-    sites: ServiceSite[];
-    siteListItems: SiteListItemModel[];
-    summary: WorkboardSummaryModel;
-    filters: WorkboardFilters;
-    filtersActive: boolean;
-    loadState: WorkboardLoadState;
-    errorMessage: string | null;
-    fetchedAt: string | null;
-    isRefreshing: boolean;
-    setSearchQuery: (searchQuery: string) => void;
-    submitSearch: (searchQuery: string) => void;
-    setWorkStatusFilter: (workStatus: WorkStatus | 'all') => void;
-    setDateScopeFilter: (dateScope: DateScopeFilter) => void;
-    setEvidenceFilter: (evidenceFilter: EvidenceFilter) => void;
-    resetPanelFilters: () => void;
-    selectedSiteId: string | null;
-    selectedVisitId: string | null;
-    selectedSiteDetail: SiteDetailModel | null;
-    selectedVisitDetail: VisitDetailModel | null;
-    pendingVisitActionId: VisitActionId | null;
-    visitActionError: string | null;
-    openSite: (siteId: string) => void;
-    closeSite: () => void;
-    openVisit: (visitId: string) => void;
-    closeVisit: () => void;
-    runVisitAction: (actionId: VisitActionId) => void;
-    clearVisitActionError: () => void;
-    isEvidenceCaptureOpen: boolean;
-    isEvidenceRetake: boolean;
-    openEvidenceCapture: (options?: { isRetake?: boolean }) => void;
-    closeEvidenceCapture: () => void;
-    saveVisitEvidence: (localUri: string, options: { isRetake: boolean }) => void;
-    reload: (options?: { isRefresh?: boolean }) => void;
-};
-
-export function useWorkboardSites(): UseWorkboardSitesResult {
-    const [sites, setSites] = useState<ServiceSite[]>([]);
+/**
+ * Composer hook — wires list, sheets, and visit workflow for the workboard screen.
+ *
+ * Holds: workboardContext (visit field state across the app).
+ * Delegates: useWorkboardList, useWorkboardSheets, useVisitFieldWorkflow.
+ * Entry point: ProviderWorkboardScreen should only need this hook.
+ */
+export function useWorkboardSites() {
     const [workboardContext, setWorkboardContext] = useState<WorkboardContext>(() =>
         structuredClone(MOCK_WORKBOARD_CONTEXT),
     );
-    const [isEvidenceCaptureOpen, setIsEvidenceCaptureOpen] = useState(false);
-    const [isEvidenceRetake, setIsEvidenceRetake] = useState(false);
-    const [filters, setFilters] = useState<WorkboardFilters>(DEFAULT_WORKBOARD_FILTERS);
-    const [loadState, setLoadState] = useState<WorkboardLoadState>('idle');
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [fetchedAt, setFetchedAt] = useState<string | null>(null);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-    const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
-    const [pendingVisitActionId, setPendingVisitActionId] = useState<VisitActionId | null>(
-        null,
-    );
-    const [visitActionError, setVisitActionError] = useState<string | null>(null);
-    const hasTrackedWorkboardView = useRef(false);
 
-    async function reload(options?: { isRefresh?: boolean }) {
-        const isRefresh = options?.isRefresh ?? false;
+    const list = useWorkboardList(workboardContext);
+    const visitUiRef = useRef({ resetVisitUi: () => {} });
 
-        if (isRefresh) {
-            setIsRefreshing(true);
-            trackEvent('refresh_triggered', { source: 'workboard_list' });
-        } else {
-            setLoadState('loading');
-        }
+    const sheets = useWorkboardSheets({
+        filteredSites: list.filteredSites,
+        workboardContext,
+        resetVisitUi: () => visitUiRef.current.resetVisitUi(),
+    });
 
-        setErrorMessage(null);
+    const visit = useVisitFieldWorkflow({
+        sites: list.sites,
+        setSites: list.setSites,
+        workboardContext,
+        setWorkboardContext,
+        selectedSiteId: sheets.selectedSiteId,
+        selectedVisitId: sheets.selectedVisitId,
+    });
 
-        try {
-            const response = await fetchSites();
-            setSites(response.sites);
-            setFetchedAt(response.fetchedAt);
-            setLoadState('success');
-
-            if (!hasTrackedWorkboardView.current) {
-                trackEvent('workboard_viewed', { siteCount: response.sites.length });
-                hasTrackedWorkboardView.current = true;
-            }
-        } catch (error) {
-            const message =
-                error instanceof WorkboardApiError
-                    ? error.message
-                    : 'Something went wrong while loading sites.';
-
-            setErrorMessage(message);
-            setLoadState('error');
-        } finally {
-            setIsRefreshing(false);
-        }
-    }
-
-    useEffect(() => {
-        void reload();
-    }, []);
-
-    const filteredSites = useMemo(
-        () => filterSites(sites, filters, workboardContext),
-        [sites, filters, workboardContext],
-    );
-
-    const siteListItems = useMemo(
-        () =>
-            filteredSites.map((site) =>
-                buildSiteListItem(site, workboardContext),
-            ),
-        [filteredSites, workboardContext],
-    );
-
-    const summary = useMemo(
-        () => buildWorkboardSummary(filteredSites, workboardContext),
-        [filteredSites, workboardContext],
-    );
-
-    function setSearchQuery(searchQuery: string) {
-        setFilters((current) => ({ ...current, searchQuery }));
-    }
-
-    function submitSearch(searchQuery: string) {
-        trackEvent('search_submitted', { queryLength: searchQuery.trim().length });
-    }
-
-    function setWorkStatusFilter(workStatus: WorkStatus | 'all') {
-        setFilters((current) => ({ ...current, workStatus }));
-        trackEvent('filter_changed', { filter: 'work_status', value: workStatus });
-    }
-
-    function setDateScopeFilter(dateScope: DateScopeFilter) {
-        setFilters((current) => ({ ...current, dateScope }));
-        trackEvent('filter_changed', { filter: 'date_scope', value: dateScope });
-    }
-
-    function setEvidenceFilter(evidenceFilter: EvidenceFilter) {
-        setFilters((current) => ({ ...current, evidenceFilter }));
-        trackEvent('filter_changed', {
-            filter: 'evidence',
-            value: evidenceFilter ?? 'none',
-        });
-    }
-
-    function resetPanelFilters() {
-        setFilters((current) => ({
-            ...current,
-            workStatus: DEFAULT_WORKBOARD_FILTERS.workStatus,
-            dateScope: DEFAULT_WORKBOARD_FILTERS.dateScope,
-            evidenceFilter: DEFAULT_WORKBOARD_FILTERS.evidenceFilter,
-        }));
-        trackEvent('filter_changed', { filter: 'reset_panel', value: 'all' });
-    }
-
-    function openSite(siteId: string) {
-        setSelectedSiteId(siteId);
-        setSelectedVisitId(null);
-        setVisitActionError(null);
-        trackEvent('site_opened', { siteId });
-    }
-
-    function closeSite() {
-        setSelectedSiteId(null);
-        setSelectedVisitId(null);
-        setVisitActionError(null);
-    }
-
-    function openVisit(visitId: string) {
-        setSelectedVisitId(visitId);
-        setVisitActionError(null);
-        trackEvent('visit_opened', { visitId, siteId: selectedSiteId ?? undefined });
-    }
-
-    function closeVisit() {
-        setSelectedVisitId(null);
-        setVisitActionError(null);
-        setIsEvidenceCaptureOpen(false);
-        setIsEvidenceRetake(false);
-    }
-
-    function clearVisitActionError() {
-        setVisitActionError(null);
-    }
-
-    function openEvidenceCapture(options?: { isRetake?: boolean }) {
-        if (!selectedVisitId) {
-            return;
-        }
-
-        setIsEvidenceRetake(options?.isRetake === true);
-        setIsEvidenceCaptureOpen(true);
-    }
-
-    function closeEvidenceCapture() {
-        setIsEvidenceCaptureOpen(false);
-        setIsEvidenceRetake(false);
-    }
-
-    function saveVisitEvidence(localUri: string, options: { isRetake: boolean }) {
-        if (!selectedVisitId) {
-            return;
-        }
-
-        const visitId = selectedVisitId;
-        const capturedAt = new Date().toISOString();
-
-        setWorkboardContext((current) => {
-            const previous = getVisitFieldState(current, visitId);
-
-            return {
-                visits: {
-                    ...current.visits,
-                    [visitId]: applyVisitEvidenceCapture(previous, {
-                        localUri,
-                        capturedAt,
-                    }),
-                },
-            };
-        });
-
-        if (options.isRetake) {
-            trackEvent('evidence_retaken', { visitId });
-        } else {
-            trackEvent('evidence_photo_captured', { visitId });
-        }
-
-        trackEvent('evidence_upload_queued', { visitId });
-        closeEvidenceCapture();
-    }
-
-    async function runVisitAction(actionId: VisitActionId) {
-        if (!selectedSiteId || !selectedVisitId || pendingVisitActionId !== null) {
-            return;
-        }
-
-        const site = sites.find((entry) => entry.id === selectedSiteId);
-        const visit = site?.visits.find((entry) => entry.id === selectedVisitId);
-        if (!visit) {
-            return;
-        }
-
-        if (!isVisitActionEnabled(visit, actionId, workboardContext)) {
-            return;
-        }
-
-        setVisitActionError(null);
-        setPendingVisitActionId(actionId);
-        trackEvent('visit_action_started', {
-            actionId,
-            visitId: selectedVisitId,
-            siteId: selectedSiteId,
-        });
-
-        try {
-            const result = await performVisitAction({
-                siteId: selectedSiteId,
-                visitId: selectedVisitId,
-                actionId,
-                context: workboardContext,
-            });
-            setSites(result.sites);
-            trackEvent('visit_action_completed', {
-                actionId,
-                visitId: selectedVisitId,
-                siteId: selectedSiteId,
-            });
-        } catch (error) {
-            const message =
-                error instanceof WorkboardApiError
-                    ? error.message
-                    : 'Unable to update the visit right now. Try again in a moment.';
-
-            setVisitActionError(message);
-            trackEvent('visit_action_failed', {
-                actionId,
-                visitId: selectedVisitId,
-                siteId: selectedSiteId,
-                message,
-            });
-        } finally {
-            setPendingVisitActionId(null);
-        }
-    }
-
-    const selectedSiteDetail = useMemo(() => {
-        if (!selectedSiteId) {
-            return null;
-        }
-
-        const site = filteredSites.find((entry) => entry.id === selectedSiteId);
-        if (!site) {
-            return null;
-        }
-
-        return buildSiteDetailModel(site, workboardContext);
-    }, [filteredSites, selectedSiteId, workboardContext]);
-
-    const selectedVisitDetail = useMemo(() => {
-        if (!selectedSiteId || !selectedVisitId) {
-            return null;
-        }
-
-        const site = filteredSites.find((entry) => entry.id === selectedSiteId);
-        const visit = site?.visits.find((entry) => entry.id === selectedVisitId);
-        if (!visit) {
-            return null;
-        }
-
-        return buildVisitDetailModel(visit, workboardContext);
-    }, [filteredSites, selectedSiteId, selectedVisitId, workboardContext]);
+    visitUiRef.current = visit;
 
     return {
-        sites,
-        siteListItems,
-        summary,
-        filters,
-        filtersActive: hasActiveFilters(filters),
-        loadState,
-        errorMessage,
-        fetchedAt,
-        isRefreshing,
-        setSearchQuery,
-        submitSearch,
-        setWorkStatusFilter,
-        setDateScopeFilter,
-        setEvidenceFilter,
-        resetPanelFilters,
-        selectedSiteId,
-        selectedVisitId,
-        selectedSiteDetail,
-        selectedVisitDetail,
-        pendingVisitActionId,
-        visitActionError,
-        openSite,
-        closeSite,
-        openVisit,
-        closeVisit,
-        runVisitAction,
-        clearVisitActionError,
-        isEvidenceCaptureOpen,
-        isEvidenceRetake,
-        openEvidenceCapture,
-        closeEvidenceCapture,
-        saveVisitEvidence,
-        reload,
+        // List + filters
+        sites: list.sites,
+        siteListItems: list.siteListItems,
+        summary: list.summary,
+        filters: list.filters,
+        filtersActive: list.filtersActive,
+        loadState: list.loadState,
+        errorMessage: list.errorMessage,
+        fetchedAt: list.fetchedAt,
+        isRefreshing: list.isRefreshing,
+        setSearchQuery: list.setSearchQuery,
+        submitSearch: list.submitSearch,
+        setWorkStatusFilter: list.setWorkStatusFilter,
+        setDateScopeFilter: list.setDateScopeFilter,
+        setEvidenceFilter: list.setEvidenceFilter,
+        resetPanelFilters: list.resetPanelFilters,
+        reload: list.reload,
+        // Sheet navigation
+        selectedSiteId: sheets.selectedSiteId,
+        selectedVisitId: sheets.selectedVisitId,
+        selectedSiteDetail: sheets.selectedSiteDetail,
+        selectedVisitDetail: sheets.selectedVisitDetail,
+        openSite: sheets.openSite,
+        closeSite: sheets.closeSite,
+        openVisit: sheets.openVisit,
+        closeVisit: sheets.closeVisit,
+        // Visit workflow (grouped for sheets)
+        visitWorkflow: visit.visitWorkflow,
     };
 }
+
+export type UseWorkboardSitesResult = ReturnType<typeof useWorkboardSites>;

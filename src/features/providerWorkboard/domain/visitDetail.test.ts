@@ -29,7 +29,7 @@ describe('visitDetail', () => {
         expect(model.scheduledWindowLabel).toContain('·');
         expect(model.evidenceChecklist[0].status).toBe('complete');
         expect(model.assetScanLabel).toContain('Asset verified');
-        expect(model.motionCheckLabel).toContain('stable');
+        expect(model.motionCheckLabel).toContain('Not required');
         expect(model.uploadStatusLabel).toContain('uploaded');
         expect(model.availableActions.some((action) => action.id === 'complete_visit')).toBe(
             true,

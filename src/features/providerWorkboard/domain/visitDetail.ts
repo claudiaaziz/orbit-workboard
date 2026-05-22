@@ -1,4 +1,4 @@
-import type { ServiceVisit, WorkboardContext } from '../types';
+import type { AssetScanResult, ServiceVisit, WorkboardContext } from '../types';
 import { getVisitFieldState } from './workboardContext';
 import { getAvailableVisitActions, type VisitActionItem } from './visitActions';
 import {
@@ -25,7 +25,10 @@ export type VisitDetailModel = {
     evidencePhotoUri: string | null;
     evidenceCapturedAtLabel: string | null;
     evidenceChecklist: VisitChecklistItem[];
+    expectedAssetCode: string;
+    assetScanResult: AssetScanResult | null;
     assetScanLabel: string;
+    motionCheckRequired: boolean;
     motionCheckLabel: string;
     uploadStatusLabel: string;
     availableActions: VisitActionItem[];
@@ -149,7 +152,10 @@ export function buildVisitDetailModel(
             ? formatLastUpdated(fieldState.evidenceCapturedAt)
             : null,
         evidenceChecklist: buildEvidenceChecklist(visit, context),
+        expectedAssetCode: visit.expectedAssetCode,
+        assetScanResult: fieldState.assetScanResult ?? null,
         assetScanLabel: buildAssetScanLabel(visit, context),
+        motionCheckRequired: visit.motionCheckRequired,
         motionCheckLabel: buildMotionCheckLabel(visit, context),
         uploadStatusLabel: buildUploadStatusLabel(visit, context),
         availableActions: getAvailableVisitActions(visit, context),

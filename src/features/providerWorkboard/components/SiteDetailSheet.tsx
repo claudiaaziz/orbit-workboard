@@ -11,8 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { SiteDetailModel, SiteDetailVisitItem } from '../domain/siteDetail';
-import type { VisitDetailModel } from '../domain/visitDetail';
-import type { VisitActionId } from '../domain/visitActions';
+import type { VisitSheetProps } from '../viewModels/visitWorkflowTypes';
 
 import { getPriorityBadgeStyle } from './priorityBadgeStyles';
 import { VisitDetailSheet } from './VisitDetailSheet';
@@ -74,38 +73,19 @@ function VisitTimelineRow({
 type SiteDetailSheetProps = {
     visible: boolean;
     model: SiteDetailModel | null;
-    visitDetail: VisitDetailModel | null;
-    pendingVisitActionId: VisitActionId | null;
-    visitActionError: string | null;
     onClose: () => void;
     onVisitPress: (visitId: string) => void;
-    onCloseVisit: () => void;
-    onRunVisitAction: (actionId: VisitActionId) => void;
-    onDismissVisitActionError: () => void;
-    isEvidenceCaptureOpen: boolean;
-    isEvidenceRetake: boolean;
-    onOpenEvidenceCapture: (options?: { isRetake?: boolean }) => void;
-    onCloseEvidenceCapture: () => void;
-    onSaveVisitEvidence: (localUri: string, options: { isRetake: boolean }) => void;
-};
+} & VisitSheetProps;
 
 
 export function SiteDetailSheet({
     visible,
     model,
-    visitDetail,
-    pendingVisitActionId,
-    visitActionError,
     onClose,
     onVisitPress,
+    visitDetail,
+    visitWorkflow,
     onCloseVisit,
-    onRunVisitAction,
-    onDismissVisitActionError,
-    isEvidenceCaptureOpen,
-    isEvidenceRetake,
-    onOpenEvidenceCapture,
-    onCloseEvidenceCapture,
-    onSaveVisitEvidence,
 }: SiteDetailSheetProps) {
     return (
         <Modal
@@ -202,16 +182,8 @@ export function SiteDetailSheet({
                     <VisitDetailSheet
                         visible={visitDetail !== null}
                         model={visitDetail}
-                        pendingVisitActionId={pendingVisitActionId}
-                        visitActionError={visitActionError}
-                        isEvidenceCaptureOpen={isEvidenceCaptureOpen}
-                        isEvidenceRetake={isEvidenceRetake}
-                        onClose={onCloseVisit}
-                        onRunVisitAction={onRunVisitAction}
-                        onDismissVisitActionError={onDismissVisitActionError}
-                        onOpenEvidenceCapture={onOpenEvidenceCapture}
-                        onCloseEvidenceCapture={onCloseEvidenceCapture}
-                        onSaveVisitEvidence={onSaveVisitEvidence}
+                        onCloseVisit={onCloseVisit}
+                        visitWorkflow={visitWorkflow}
                     />
                 </SafeAreaView>
             ) : null}

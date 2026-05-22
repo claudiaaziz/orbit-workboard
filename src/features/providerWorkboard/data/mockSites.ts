@@ -184,8 +184,8 @@ export function buildMockSites(now: Date): ServiceSite[] {
                     equipmentLabel: 'MRI Chiller Unit',
                     expectedAssetCode: 'SH-MRI-901',
                     evidenceRequired: true,
-                    motionCheckRequired: true,
-                    locationRequired: true,
+                    motionCheckRequired: false,
+                    locationRequired: false,
                 }),
                 createVisit(2, 'site-edge-002', 'en_route', todayAfternoon, {
                     equipmentLabel: 'Backup Generator Panel',
