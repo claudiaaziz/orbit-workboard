@@ -49,34 +49,34 @@ Captured on iOS via Expo Go.
 
 Summary header, filters, and virtualized site list.
 
-![Provider workboard](./docs/screenshots/provider-workboard.png)
+<img src="./docs/screenshots/provider-workboard.png" width="300" alt="Provider workboard" />
 
 ### Site detail sheet
 
 Site header, visit timeline, and warnings.
 
-![Site detail](./docs/screenshots/site-detail.png)
+<img src="./docs/screenshots/site-detail.png" width="300" alt="Site detail" />
 
 ### Visit detail — evidence and actions
 
 Visit sheet before required field work is complete:
 
-![Visit detail — evidence incomplete](./docs/screenshots/visit-detail-evidence-incomplete.png)
+<img src="./docs/screenshots/visit-detail-evidence-incomplete.png" width="300" alt="Visit detail — evidence incomplete" />
 
 After evidence capture, asset scan, and motion check:
 
-![Visit detail — evidence complete](./docs/screenshots/visit-detail-evidence-complete.png)
+<img src="./docs/screenshots/visit-detail-evidence-complete.png" width="300" alt="Visit detail — evidence complete" />
 
 ### Asset scan
 
 Camera scanner with development fallback input.
 
-![Scan asset code](./docs/screenshots/scan-asset-code-modal.png)
+<img src="./docs/screenshots/scan-asset-code-modal.png" width="300" alt="Scan asset code" />
 
 ### Motion check
 
 4-second accelerometer capture in progress and stable result.
 
-![Motion check — sampling](./docs/screenshots/checking-motion-modal.png)
+<img src="./docs/screenshots/checking-motion-modal.png" width="300" alt="Motion check — sampling" />
 
-![Motion check — stable](./docs/screenshots/motion-modal-success-state.png)
+<img src="./docs/screenshots/motion-modal-success-state.png" width="300" alt="Motion check — stable" />
