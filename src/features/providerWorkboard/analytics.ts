@@ -24,7 +24,6 @@ export type AnalyticsPayload = Record<
     string | number | boolean | null | undefined
 >;
 
-// TODO: call this
 export function trackEvent(
     name: AnalyticsEventName,
     payload: AnalyticsPayload = {},

@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SiteDetailSheet } from '../components/SiteDetailSheet';
 import { SiteListRow } from '../components/SiteListRow';
 import { WorkboardFilterControls } from '../components/WorkboardFilterControls';
+import { WorkboardStaleBanner } from '../components/WorkboardStaleBanner';
 import { WorkboardSummaryHeader } from '../components/WorkboardSummaryHeader';
 import { useWorkboardSites } from '../viewModels/useWorkboardSites';
 
@@ -32,6 +33,8 @@ export function ProviderWorkboardScreen() {
         errorMessage,
         fetchedAt,
         isRefreshing,
+        isWorkboardDataStale,
+        workboardStaleAgeLabel,
         setSearchQuery,
         submitSearch,
         setWorkStatusFilter,
@@ -97,12 +100,20 @@ export function ProviderWorkboardScreen() {
                                 <Text style={styles.title}>Provider Workboard</Text>
                                 <Text style={styles.subtitle}>Orbit Field Services</Text>
                             </View>
-                            {fetchedAt ? (
+                            {fetchedAt && !isWorkboardDataStale ? (
                                 <Text style={styles.lastRefreshed}>
                                     Updated {formatUpdatedAt(fetchedAt)}
                                 </Text>
                             ) : null}
                         </View>
+
+                        {isWorkboardDataStale && workboardStaleAgeLabel ? (
+                            <WorkboardStaleBanner
+                                lastRefreshedLabel={workboardStaleAgeLabel}
+                                isRefreshing={isRefreshing}
+                                onRefresh={() => void reload({ isRefresh: true })}
+                            />
+                        ) : null}
 
                         <WorkboardSummaryHeader summary={summary} />
 

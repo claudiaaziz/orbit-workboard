@@ -99,14 +99,6 @@ export type AssetScan = {
     scannedAt: string; // ISO timestamp
 };
 
-type MotionSample = {
-    visitId: string;
-    startedAt: string; // ISO timestamp
-    completedAt: string; // ISO timestamp
-    maxDeviationG: number;
-    result: "stable" | "rough_motion_detected";
-};
-
 type ServiceAddress = {
     line1: string;
     city: string;

@@ -2,7 +2,9 @@
  * Sheet navigation: which site/visit is open and what to show in each sheet.
  *
  * Owns: selectedSiteId, selectedVisitId, open/close site & visit.
- * Derives: selectedSiteDetail, selectedVisitDetail (from filtered sites + context).
+ * Derives: selectedSiteDetail, selectedVisitDetail (from full sites store + context).
+ * Uses all sites, not filteredSites, so an action that changes work status does not
+ * tear down open sheets while list filters still hide the site from the list.
  * Calls resetVisitUi when opening/closing so capture overlays do not leak across visits.
  */
 import { useMemo, useState } from 'react';
@@ -15,13 +17,13 @@ import type { VisitDetailModel } from '../domain/visitDetail';
 import type { ServiceSite, WorkboardContext } from '../types';
 
 type UseWorkboardSheetsParams = {
-    filteredSites: ServiceSite[];
+    sites: ServiceSite[];
     workboardContext: WorkboardContext;
     resetVisitUi: () => void;
 };
 
 export function useWorkboardSheets({
-    filteredSites,
+    sites,
     workboardContext,
     resetVisitUi,
 }: UseWorkboardSheetsParams) {
@@ -57,27 +59,27 @@ export function useWorkboardSheets({
             return null;
         }
 
-        const site = filteredSites.find((entry) => entry.id === selectedSiteId);
+        const site = sites.find((entry) => entry.id === selectedSiteId);
         if (!site) {
             return null;
         }
 
         return buildSiteDetailModel(site, workboardContext);
-    }, [filteredSites, selectedSiteId, workboardContext]);
+    }, [sites, selectedSiteId, workboardContext]);
 
     const selectedVisitDetail = useMemo((): VisitDetailModel | null => {
         if (!selectedSiteId || !selectedVisitId) {
             return null;
         }
 
-        const site = filteredSites.find((entry) => entry.id === selectedSiteId);
+        const site = sites.find((entry) => entry.id === selectedSiteId);
         const visit = site?.visits.find((entry) => entry.id === selectedVisitId);
         if (!visit) {
             return null;
         }
 
         return buildVisitDetailModel(visit, workboardContext);
-    }, [filteredSites, selectedSiteId, selectedVisitId, workboardContext]);
+    }, [sites, selectedSiteId, selectedVisitId, workboardContext]);
 
     return {
         selectedSiteId,

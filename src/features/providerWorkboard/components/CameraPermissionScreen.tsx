@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getCameraPermissionPrompt, type CameraPermissionSource } from '../native/ensureCameraPermission';
@@ -58,7 +58,19 @@ export function CameraPermissionScreen({
                             >
                                 <Text style={styles.primaryLabel}>Allow camera</Text>
                             </Pressable>
-                        ) : null}
+                        ) : (
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Open device settings to enable camera"
+                                onPress={() => void Linking.openSettings()}
+                                style={({ pressed }) => [
+                                    styles.primaryButton,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text style={styles.primaryLabel}>Open Settings</Text>
+                            </Pressable>
+                        )}
                         {footer}
                     </>
                 )}

@@ -22,7 +22,7 @@ export function useWorkboardSites() {
     const visitUiRef = useRef({ resetVisitUi: () => {} });
 
     const sheets = useWorkboardSheets({
-        filteredSites: list.filteredSites,
+        sites: list.sites,
         workboardContext,
         resetVisitUi: () => visitUiRef.current.resetVisitUi(),
     });
@@ -49,6 +49,8 @@ export function useWorkboardSites() {
         errorMessage: list.errorMessage,
         fetchedAt: list.fetchedAt,
         isRefreshing: list.isRefreshing,
+        isWorkboardDataStale: list.isWorkboardDataStale,
+        workboardStaleAgeLabel: list.workboardStaleAgeLabel,
         setSearchQuery: list.setSearchQuery,
         submitSearch: list.submitSearch,
         setWorkStatusFilter: list.setWorkStatusFilter,

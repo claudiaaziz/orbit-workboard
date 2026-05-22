@@ -12,6 +12,10 @@ import { fetchSites, WorkboardApiError } from '../data/mockApi';
 import { filterSites, hasActiveFilters } from '../domain/workboardFilters';
 import { buildWorkboardSummary } from '../domain/workboardSummary';
 import { buildSiteListItem } from '../domain/siteSummary';
+import {
+    formatWorkboardAgeAgo,
+    isWorkboardStale,
+} from '../domain/workboardStaleness';
 import type {
     DateScopeFilter,
     EvidenceFilter,
@@ -31,6 +35,7 @@ export function useWorkboardList(workboardContext: WorkboardContext) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [fetchedAt, setFetchedAt] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [stalenessNow, setStalenessNow] = useState(() => new Date());
     const hasTrackedWorkboardView = useRef(false);
 
     async function reload(options?: { isRefresh?: boolean }) {
@@ -71,6 +76,18 @@ export function useWorkboardList(workboardContext: WorkboardContext) {
     useEffect(() => {
         void reload();
     }, []);
+
+    useEffect(() => {
+        if (loadState !== 'success' || !fetchedAt) {
+            return;
+        }
+
+        const intervalId = setInterval(() => {
+            setStalenessNow(new Date());
+        }, 60_000);
+
+        return () => clearInterval(intervalId);
+    }, [loadState, fetchedAt]);
 
     // filter functionality
     const filteredSites = useMemo(
@@ -124,6 +141,12 @@ export function useWorkboardList(workboardContext: WorkboardContext) {
         trackEvent('filter_changed', { filter: 'reset_panel', value: 'all' });
     }
 
+    const isWorkboardDataStale =
+        loadState === 'success' && isWorkboardStale(fetchedAt, stalenessNow);
+    const workboardStaleAgeLabel = fetchedAt
+        ? formatWorkboardAgeAgo(fetchedAt, stalenessNow)
+        : null;
+
     return {
         sites,
         setSites,
@@ -136,6 +159,8 @@ export function useWorkboardList(workboardContext: WorkboardContext) {
         errorMessage,
         fetchedAt,
         isRefreshing,
+        isWorkboardDataStale,
+        workboardStaleAgeLabel,
         setSearchQuery,
         submitSearch,
         setWorkStatusFilter,
