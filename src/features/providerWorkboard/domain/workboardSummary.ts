@@ -15,12 +15,10 @@ export type WorkboardSummaryModel = {
     failedOrQueuedUploads: number;
 };
 
-// Helpers
 function isVisitDueToday(visit: ServiceVisit, referenceDate: Date): boolean {
     return visitMatchesDateScope(visit, 'today', referenceDate);
 }
 
-// Builder
 export function buildWorkboardSummary(
     sites: ServiceSite[],
     context: WorkboardContext,

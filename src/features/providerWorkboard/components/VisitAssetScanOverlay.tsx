@@ -1,6 +1,15 @@
 import { CameraView } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { classifyAssetScan } from '../domain/assetScan';
@@ -13,10 +22,6 @@ type VisitAssetScanOverlayProps = {
     onScanSaved: (scannedCode: string) => void;
 };
 
-/**
- * Inline barcode scan when the OS scanner API is unavailable.
- * Camera permission is requested before this overlay opens.
- */
 export function VisitAssetScanOverlay({
     expectedAssetCode,
     equipmentLabel,
@@ -24,6 +29,7 @@ export function VisitAssetScanOverlay({
     onScanSaved,
 }: VisitAssetScanOverlayProps) {
     const scanLockedRef = useRef(false);
+    const [devCodeInput, setDevCodeInput] = useState('');
     const [scanResult, setScanResult] = useState<{
         scannedCode: string;
         result: AssetScanResult;
@@ -50,6 +56,7 @@ export function VisitAssetScanOverlay({
     function handleRescan() {
         scanLockedRef.current = false;
         setScanResult(null);
+        setDevCodeInput('');
     }
 
     if (scanResult) {
@@ -104,31 +111,72 @@ export function VisitAssetScanOverlay({
 
     return (
         <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Scan asset code</Text>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Close asset scan"
-                    onPress={onClose}
-                    hitSlop={8}
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+            >
+                <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
                 >
-                    <Text style={styles.link}>Cancel</Text>
-                </Pressable>
-            </View>
-            <Text style={styles.subtitle}>
-                {equipmentLabel} · expected {expectedAssetCode}
-            </Text>
-            <Text style={styles.hint}>Point at the QR or barcode until a result appears.</Text>
-            <View style={styles.cameraFrame}>
-                <CameraView
-                    style={styles.camera}
-                    facing="back"
-                    barcodeScannerSettings={{
-                        barcodeTypes: ['qr', 'code128', 'code39', 'ean13'],
-                    }}
-                    onBarcodeScanned={({ data }) => handleBarcodeScanned(data)}
-                />
-            </View>
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Scan asset code</Text>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Close asset scan"
+                            onPress={onClose}
+                            hitSlop={8}
+                        >
+                            <Text style={styles.link}>Cancel</Text>
+                        </Pressable>
+                    </View>
+                    <Text style={styles.subtitle}>
+                        {equipmentLabel} · expected {expectedAssetCode}
+                    </Text>
+                    <Text style={styles.hint}>
+                        Point at the QR or barcode until a result appears.
+                    </Text>
+                    <View style={styles.cameraFrame}>
+                        <CameraView
+                            style={styles.camera}
+                            facing="back"
+                            barcodeScannerSettings={{
+                                barcodeTypes: ['qr', 'code128', 'code39', 'ean13'],
+                            }}
+                            onBarcodeScanned={({ data }) => handleBarcodeScanned(data)}
+                        />
+                    </View>
+
+                    <View style={styles.devSection}>
+                        <Text style={styles.devLabel}>
+                            Development fallback — enter code if camera scan is unavailable
+                        </Text>
+                        <TextInput
+                            value={devCodeInput}
+                            onChangeText={setDevCodeInput}
+                            placeholder={expectedAssetCode}
+                            placeholderTextColor="#6B7280"
+                            autoCapitalize="characters"
+                            autoCorrect={false}
+                            style={styles.devInput}
+                            accessibilityLabel="Development fallback asset code input"
+                        />
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Apply development fallback asset code"
+                            onPress={() => handleBarcodeScanned(devCodeInput)}
+                            style={({ pressed }) => [
+                                styles.secondaryButton,
+                                pressed && styles.pressed,
+                            ]}
+                        >
+                            <Text style={styles.secondaryLabel}>Apply code (dev)</Text>
+                        </Pressable>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -138,6 +186,13 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: '#111827',
         zIndex: 11,
+    },
+    keyboardAvoid: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: 16,
     },
     header: {
         flexDirection: 'row',
@@ -198,11 +253,34 @@ const styles = StyleSheet.create({
         color: '#FECACA',
     },
     cameraFrame: {
-        flex: 1,
+        height: 280,
         marginHorizontal: 16,
-        marginBottom: 16,
+        marginBottom: 12,
         borderRadius: 12,
         overflow: 'hidden',
+    },
+    devSection: {
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#374151',
+        paddingTop: 12,
+    },
+    devLabel: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        lineHeight: 16,
+    },
+    devInput: {
+        minHeight: 44,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#6B7280',
+        paddingHorizontal: 12,
+        fontSize: 16,
+        color: '#F9FAFB',
+        backgroundColor: '#1F2937',
     },
     camera: {
         flex: 1,

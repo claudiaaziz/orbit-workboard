@@ -1,3 +1,4 @@
+// permission prompts, camera preview, photo review.
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { CameraView as CameraViewType } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
@@ -12,11 +13,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { trackEvent } from '../analytics';
+import { captureEvidencePhoto } from '../native/captureEvidencePhoto';
+import { ensureCameraPermission } from '../native/ensureCameraPermission';
 
 const PLACEHOLDER_EVIDENCE = require('../../../../assets/icon.png');
 
 type CaptureStep = 'permission' | 'camera' | 'preview';
+
+function getPlaceholderEvidenceUri(): string {
+    return Image.resolveAssetSource(PLACEHOLDER_EVIDENCE).uri;
+}
 
 type VisitEvidenceCaptureOverlayProps = {
     equipmentLabel: string;
@@ -44,15 +50,15 @@ export function VisitEvidenceCaptureOverlay({
     }, [permission?.granted]);
 
     async function handleRequestPermission() {
-        trackEvent('camera_permission_requested', { source: 'visit_evidence_capture' });
-        const result = await requestPermission();
-        if (result.granted) {
+        const granted = await ensureCameraPermission('visit_evidence_capture');
+        if (granted) {
+            await requestPermission();
             setStep('camera');
         }
     }
 
     async function handleTakePhoto() {
-        if (!cameraRef.current || !cameraReady || isCapturing) {
+        if (isCapturing) {
             return;
         }
 
@@ -60,20 +66,19 @@ export function VisitEvidenceCaptureOverlay({
         setIsCapturing(true);
 
         try {
-            const photo = await cameraRef.current.takePictureAsync({
-                quality: 0.7,
-                shutterSound: false,
-            });
+            const result = await captureEvidencePhoto(cameraRef.current, { cameraReady });
 
-            if (!photo?.uri) {
-                setCaptureError('Could not save the photo. Try again.');
+            if (!result.ok) {
+                setCaptureError(
+                    result.reason === 'no_uri'
+                        ? 'Could not save the photo. Try again.'
+                        : 'Camera capture failed. Try again or use the simulator fallback.',
+                );
                 return;
             }
 
-            setPreviewUri(photo.uri);
+            setPreviewUri(result.uri);
             setStep('preview');
-        } catch {
-            setCaptureError('Camera capture failed. Try again or use the simulator fallback.');
         } finally {
             setIsCapturing(false);
         }
@@ -94,8 +99,7 @@ export function VisitEvidenceCaptureOverlay({
     }
 
     function handleSimulatorFallback() {
-        const uri = Image.resolveAssetSource(PLACEHOLDER_EVIDENCE).uri;
-        onCaptured(uri, { isRetake });
+        onCaptured(getPlaceholderEvidenceUri(), { isRetake });
     }
 
     if (step === 'preview' && previewUri) {

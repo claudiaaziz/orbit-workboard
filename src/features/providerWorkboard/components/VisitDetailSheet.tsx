@@ -19,8 +19,8 @@ import {
 import type { VisitActionId } from '../domain/visitActions';
 import type { VisitChecklistItem, VisitDetailModel } from '../domain/visitDetail';
 import type { VisitWorkflowProps } from '../viewModels/visitWorkflowTypes';
-import { VisitAssetScanOverlay } from '../native/VisitAssetScanOverlay';
-import { VisitEvidenceCaptureOverlay } from '../native/VisitEvidenceCaptureOverlay';
+import { VisitAssetScanOverlay } from './VisitAssetScanOverlay';
+import { VisitEvidenceCaptureOverlay } from './VisitEvidenceCaptureOverlay';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (

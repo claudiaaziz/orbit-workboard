@@ -32,8 +32,6 @@ export type SiteListItemModel = {
     };
 };
 
-// List-row formatters
-
 function countVisitsByStatus(
     visits: ServiceVisit[],
 ): Partial<Record<VisitStatus, number>> {
@@ -70,8 +68,6 @@ function formatVisitStatusSummary(visits: ServiceVisit[]): string {
 function siteHasLateVisit(site: ServiceSite, referenceDate: Date): boolean {
     return site.visits.some((visit) => isVisitLate(visit, referenceDate));
 }
-
-// Builder
 
 export function buildSiteListItem(
     site: ServiceSite,

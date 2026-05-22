@@ -9,7 +9,7 @@ import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Alert } from 'react-native';
 
 import { trackEvent } from '../analytics';
-import { runVisitAssetScan } from '../native/runVisitAssetScan';
+import { ensureCameraPermission } from '../native/ensureCameraPermission';
 import { performVisitAction, WorkboardApiError } from '../data/mockApi';
 import { getVisitFieldState } from '../domain/workboardContext';
 import { isVisitActionEnabled } from '../domain/visitActionMutations';
@@ -143,13 +143,8 @@ export function useVisitFieldWorkflow({
             return;
         }
 
-        const attempt = await runVisitAssetScan();
-        if (attempt.outcome === 'scanned') {
-            saveAssetScan(attempt.code);
-            return;
-        }
-
-        if (attempt.outcome === 'inline_fallback') {
+        const granted = await ensureCameraPermission('visit_asset_scan');
+        if (granted) {
             setIsAssetScanOpen(true);
         }
     }
